@@ -3,6 +3,8 @@ import * as fastlogger from './controllers/fastlogger.js'
 import path from 'path';
 import os from 'os';
 import {fileURLToPath} from 'url';
+import formBody from '@fastify/formbody';
+import {validateBasicAuth} from "./utils/api_validate.js";
 
 const {fastify} = fastlogger;
 
@@ -22,6 +24,24 @@ fastify.register(fastifyStatic, {
     prefix: '/apps/', // 新的访问路径前缀
     decorateReply: false, // 禁用 sendFile
 });
+
+fastify.register(fastifyStatic, {
+    root: path.join(__dirname, 'json'),
+    prefix: '/json/', // 新的访问路径前缀
+    decorateReply: false, // 禁用 sendFile
+});
+
+// 给静态目录插件中心挂载basic验证
+fastify.addHook('preHandler', (req, reply, done) => {
+    if (req.raw.url.startsWith('/apps/')) {
+        validateBasicAuth(req, reply, done);
+    } else {
+        done();
+    }
+});
+
+// 注册插件以支持 application/x-www-form-urlencoded
+fastify.register(formBody);
 
 // 注册控制器
 import {registerRoutes} from './controllers/index.js';
@@ -44,7 +64,8 @@ registerRoutes(fastify, {
 const start = async () => {
     try {
         // 启动 Fastify 服务
-        await fastify.listen({port: PORT, host: '0.0.0.0'});
+        // await fastify.listen({port: PORT, host: '0.0.0.0'});
+        await fastify.listen({port: PORT, host: '::'});
 
         // 获取本地和局域网地址
         const localAddress = `http://localhost:${PORT}`;
@@ -63,7 +84,8 @@ const start = async () => {
         console.log(`Server listening at:`);
         console.log(`- Local: ${localAddress}`);
         console.log(`- LAN:   ${lanAddress}`);
-        console.log(`- PLATFORM:   ${process.platform}`);
+        console.log(`- PLATFORM:   ${process.platform} ${process.arch}`);
+        console.log(`- VERSION:   ${process.version}`);
         if (process.env.VERCEL) {
             console.log('Running on Vercel!');
             console.log('Vercel Environment:', process.env.VERCEL_ENV); // development, preview, production

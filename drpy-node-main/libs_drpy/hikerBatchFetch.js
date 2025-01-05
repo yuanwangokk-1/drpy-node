@@ -1,9 +1,33 @@
 import DsQueue from './dsQueue.js';
 import fastq from "fastq";
+import http from 'http';
+import https from 'https';
 import axios from 'axios';
 
-export const batchFetch3 = async (items, maxWorkers = 5, timeoutConfig = 5000) => {
+const batchSockets = 16;
+
+async function sleep(ms) {
+    // 模拟异步请求
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve();
+        }, ms);
+    });
+}
+
+export const batchFetch3 = async (items, maxWorkers = 16, timeoutConfig = 5000, batchSize = 16) => {
     let t1 = (new Date()).getTime();
+
+    const AgentOption = {keepAlive: true, maxSockets: batchSockets, timeout: 30000}; // 最大连接数64,30秒定期清理空闲连接
+// const AgentOption = {keepAlive: true};
+    const httpAgent = new http.Agent(AgentOption);
+    const httpsAgent = new https.Agent({rejectUnauthorized: false, ...AgentOption});
+
+// 配置 axios 使用代理
+    const _axios = axios.create({
+        httpAgent,  // 用于 HTTP 请求的代理
+        httpsAgent, // 用于 HTTPS 请求的代理
+    });
 
     // 获取全局 timeout 设置
     const timeout = timeoutConfig;
@@ -12,7 +36,7 @@ export const batchFetch3 = async (items, maxWorkers = 5, timeoutConfig = 5000) =
     const worker = async (task, callback) => {
         const {item, index, results} = task;
         try {
-            const response = await axios(
+            const response = await _axios(
                 Object.assign({}, item?.options, {
                     url: item.url,
                     method: item?.options?.method || 'GET',
@@ -31,17 +55,22 @@ export const batchFetch3 = async (items, maxWorkers = 5, timeoutConfig = 5000) =
 
     // 创建 fastq 队列
     const results = [];
-    const queue = fastq(worker, maxWorkers);
 
-    // 将任务添加到队列，并捕获错误以确保继续执行
-    const tasks = items.map((item, index) => {
-        return new Promise((resolve) => {
-            queue.push({item, index, results}, () => resolve());
+    // 分批次处理
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const queue = fastq(worker, maxWorkers);
+
+        const tasks = batch.map((item, index) => {
+            return new Promise((resolve) => {
+                queue.push({item, index: i + index, results}, () => resolve());
+            });
         });
-    });
 
-    // 等待所有任务完成
-    await Promise.all(tasks);
+        // 等待当前批次任务完成
+        await Promise.all(tasks);
+        // await sleep(200);
+    }
 
     let t2 = (new Date()).getTime();
     log(`fastq 批量请求 ${items[0].url} 等 ${items.length}个地址 耗时${t2 - t1}毫秒:`);
@@ -51,6 +80,17 @@ export const batchFetch3 = async (items, maxWorkers = 5, timeoutConfig = 5000) =
 
 export const batchFetch4 = async (items, maxWorkers = 5, timeoutConfig = 5000) => {
     let t1 = (new Date()).getTime();
+    const AgentOption = {keepAlive: true, maxSockets: batchSockets, timeout: 30000}; // 最大连接数64,30秒定期清理空闲连接
+// const AgentOption = {keepAlive: true};
+    const httpAgent = new http.Agent(AgentOption);
+    const httpsAgent = new https.Agent({rejectUnauthorized: false, ...AgentOption});
+
+// 配置 axios 使用代理
+    const _axios = axios.create({
+        httpAgent,  // 用于 HTTP 请求的代理
+        httpsAgent, // 用于 HTTPS 请求的代理
+    });
+
     const queue = new DsQueue(maxWorkers);
 
     // 获取全局 timeout 设置
@@ -61,7 +101,7 @@ export const batchFetch4 = async (items, maxWorkers = 5, timeoutConfig = 5000) =
     items.forEach((item, index) => {
         queue.add(async () => {
             try {
-                const response = await axios(
+                const response = await _axios(
                     Object.assign({}, item?.options, {
                         url: item.url,
                         method: item?.options?.method || 'GET',

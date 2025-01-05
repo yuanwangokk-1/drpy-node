@@ -1,5 +1,229 @@
 # drpyS更新记录
 
+### 20250105
+
+更新至V1.1.1
+
+1. 优化订阅过滤和青少年模式没处理采王这类自定义别名的情况
+2. push_agent 推送json兼容依赖播放属性，已实现海阔drpyHiker的任意二级推送至装逼壳并依赖推送者进行解析播放，包括小说漫画
+3. aes加密的源在初始化获取原始代码的时候发现获取的文本不完善，待排查问题，待解决，如皮皮虾。之前把aes加密函数放lazy里频繁出现这种问题
+4. 闪电盘等几个网盘源的筛选数据有问题，尽我能力尝试修复
+5. 更新安装文档
+6. 增加新源 `播剧网.js`，`樱漫[漫].js` ，`皮皮虾[优].js`
+7. 从源动力零元购进货了一批ds源并测试和修正代码
+8. 哔哩直播搜索功能需要配置环境变量哔哩cookie，暂时从网页上复制后手动填写入库吧，扫码获取的那个cookie貌似不行
+9. 增加哔哩影视
+10. 抖音直播弹幕随机颜色，且使用Jinja2绑定服务地址，解决反代后不存在端口问题
+11. 给静态目录插件中心挂载basic验证，防止非法绕过主页直接使用插件
+12. 增加代理转发接口 `/req/被转发的完整地址`,可在设置中心开启或关闭
+
+### 20250104
+
+每30天等于1个月，版本号提升0.1，终于发布1.1版本了
+
+更新至V1.1.0
+
+1. 优化 `抖音直播弹幕[官].js` 在加载弹幕过程中奇怪的废弃用法报错问题
+2. 增加 `采集之王[合].js` 与相对应的json文件和map文件
+3. 优化本地包打包发布脚本，支持过滤密发布绿色版，以后群文件只传绿色版
+4. 打包发布脚本同步新增js版的，可以不安装python环境也能使用了。
+
+### 20250103
+
+更新至V1.0.30
+
+1. 增加 `抖音直播弹幕[官].js`
+2. drpyS注入可用的全局函数 `WebSocket` `WebSocketServer` `zlib`
+3. drpyS注入可用的this指针环境变量 `hostUrl`,不含协议头的主机地址
+4. 抖音弹幕共享全局fastify接口的服务和端口
+5. 增加新的依赖 `google-protobuf`
+6. 首页推荐数据报错不再抛错，避免影响其他数据加载
+7. `我的哔哩[官].js` 等传参源兼容装逼壳
+8. 增加 `runMain` 异步函数，可以调用drpyS.js里的内容
+9. 配置生成逻辑改成并发执行，可能某些场景会比较快
+10. 增加直转点
+
+### 20250102
+
+更新至V1.0.29
+
+1. 增加 `七猫小说.js`
+2. 新增 `我的哔哩[官].js`,支持传参源，传参字典可自定义，文件在 `config/map.txt`,格式为 `接口名称@参数@别名`
+3. 支持ipv6监听服务
+
+### 20250101
+
+更新至V1.0.28
+
+元旦快乐
+
+1. 设置AI功能回复优化，明确知道是哪个AI
+2. basic授权机制调整，未配置 `.env` 文件的这两个属性任意一个时不启用此功能
+3. 增加`玩偶哥哥[盘].js`,隔壁老三套娃自写，配套筛选
+
+### 20241231
+
+更新至V1.0.27
+
+1. 设置中心优化，样式微调
+2. 新增 `_lib.waf.js` 通用过长城雷池防火墙工具，与对应示例源 `团长资源[盘].js`
+3. 优化 `多多[盘].js` 默认筛选不正确导致没数据问题
+4. 新增源 `专享影视.js` `火车太堵.js`
+5. 增加 `robots.txt` 防止被引擎收录
+6. 服务启动增加打印nodejs版本号
+7. 主页接口增加basic验证，请自己手动配置.env文件中的 `API_AUTH_NAME` 和 `API_AUTH_CODE`
+8. 配置接口和源接口增加api授权，在.env文件中配置 `API_PWD = dzyyds`
+9. AI工具集成到 `AIS` 对象里了
+10. ENV环境变量get和set方法增加参数3:`isObject=1`,支持读写变量如果是字符串自动转为object对象
+11. AI库完成讯飞星火智能体对接，可配置当前AI为3，新增依赖库 `ws`
+
+### 20241230
+
+更新至V1.0.26
+
+1. 设置中心优化，样式适配装逼壳。并支持全局站源动作
+2. 增加简繁体转换函数 `simplecc`,用法如下:  
+   简体转繁体: `simplecc("发财了去植发", "s2t")`  
+   繁体转简体: `simplecc("發財了去植髮", "t2s")`
+3. 增加源相互调用功能,仅支持在源的特定函数里使用，示例:
+
+```javascript
+let {proxyUrl, getRule} = this;
+const tx_rule = await getRule('腾云驾雾[官]');
+if (tx_rule) {
+    log(tx_rule.url);
+    log(tx_rule.title);
+    // log(JSON.stringify(tx_rule));
+    let data1 = await tx_rule.callRuleFn('搜索', ['斗罗大陆'])
+    log(data1);
+    let data2 = await tx_rule.callRuleFn('一级', ['tv'])
+    log(data2);
+} else {
+    log('没有这个原')
+}
+```
+
+4. 增加讯飞星火AI对话交互动作,设置中心推荐栏可用。 源里可使用这个对象 `SparkAI`,调用示例:
+
+```javascript
+const sparkAI = new SparkAI({
+    authKey: ENV.get('spark_ai_authKey'),
+    baseURL: 'https://spark-api-open.xf-yun.com',
+});
+rule.askLock = 1;
+try {
+    replyContent = await sparkAI.ask(prompt, {temperature: 1.0});
+} catch (error) {
+    replyContent = error.message;
+}
+rule.askLock = 0;
+```
+
+### 20241229
+
+更新至V1.0.25
+
+1. 优化设置中心在海阔的样式，增加推送功能支持推送海阔数据示例
+2. 优化 `push_agent.js` 增加默认图片，增加海阔推送数据识别
+3. 从 `api.js` 文件中抽离出 `mediaProxy.js` 逻辑
+4. 优化本地多线程流代理，尝试降低出现`403` 问题的频率
+5. batchFetch也尝试增加 连接数代理降低网站连接超出后自动拒绝的概率
+6. 后端 `httpUrl` 使用独立的 `_axios` 对象，避免跟系统内 `req` 所用对象冲突
+7. 完成设置中心所有平台扫码功能
+
+### 20241228
+
+更新至V1.0.24
+
+1. 本地代理支持多线程流代理，参考设置中心的本地代理测试。默认线程数为1，可以设置中心自行修改
+2. 至臻盘新增 `原代服` `原代本` 两种画质，可选择启用代理播放功能
+3. 更新了两个源
+4. 夸克扫描功能优化，支持取消扫码
+5. 设置中心图标优化，并支持推送番茄小说
+6. 默认排序文件改为 `order_common.example.html` `order_yellow.example.html` 允许用户自己新建不带example的文件避免跟仓库冲突
+
+### 20241227
+
+更新至V1.0.23
+
+1. 更新 `searchable` `filterable` `quickSearch` 默认全部为0
+2. 优化网盘源二级失效资源处理
+3. 新增 `push_agent.js` 推送专用源，支持 各大网盘，官链，直链，待嗅探，多列表等场景推送
+4. 修复已有源三个属性没正确设置问题
+5. 增加 `蜡笔[盘].js`
+6. 设置中心支持推送
+7. drpyS新增可用函数 `XMLHttpRequest` `_fetch`,由于`fetch`是drpy2内置函数等同于`request`,新增的`_fetch`是nodejs原生函数。示例:
+
+```javascript
+const xhr = new XMLHttpRequest();
+log(xhr);
+```
+
+8. 环境this增加 `httpUrl`
+9. 设置中心增加夸克扫码功能与真实可用的逻辑
+10. action动作交互升级至最新标准，完美适配最新装逼壳
+
+### 20241226
+
+更新至V1.0.22
+
+1. 更新网盘插件 `ali.js`,修正播放失败无法自动刷新cookie问题
+2. 更新 `至臻[盘].js` 支持原画播放
+3. 夸克支持原画播放，并优化夸克和uc自动刷新cookie逻辑
+4. `random-http-ua.js` 优化 `instanceof Array` 改为 `Array.isArray` 解决传递option无法生成ua问题
+5. drpyS源模块系统升级，支持使用`.cjs`的标准commonJS模块导入使用，运行读写文件等操作。示例`_lib.request.cjs`。谨慎使用，权限比较大 在源里的示例用法:
+
+```javascript
+const fs = require('fs');
+const path = require('path');
+const absolutePath = path.resolve('./');
+console.log(absolutePath);
+const data = fs.readFileSync('./js/_360.js', 'utf8');
+console.log(data);
+const {getPublicIp1, getPublicIp2} = require('../js/_lib.request.cjs');
+console.log('typeof getPublicIp1:', typeof getPublicIp1);
+console.log('typeof getPublicIp2:', typeof getPublicIp2);
+```
+
+6. drpyS源初始化增加30秒超时返回机制(但不会中断后台任务，请确保代码不要含有死循环等操作)
+7. 研究本地代理流但是没成功，代码保留了
+
+### 20241225
+
+更新至V1.0.21
+
+1. drpyS t4接口升级，同时支持`GET` `POST form` `POST JSON`
+2. drpyS 源增加阿里工具类 `Ali`
+3. drpyS 源增加 `_ENV`，用于获取 `process.env`
+4. drpyS 源所有函数的this变量内增加 `publicUrl`属性，可以用于获取本t4服务的公开文件目录，自行拼接静态文件
+5. 订阅里增加 `?sub=all` 的订阅，支持默认的源排序规则
+6. 增加源设置中心并置顶在订阅配置里，支持手动输入4种平台的cookie
+7. 设置中心增加青少年设置的开关，设置值为1可以彻底隐藏带密的源，无视订阅
+8. uc 和 夸克自动更新播放所需cookie
+9. 引入一个新的依赖 `dayjs`
+
+### 20241224
+
+更新至V1.0.20
+
+1. 环境变量 `/config/env.json` 不再提交到github
+2. 修改规则内各个函数的this指向，使this可以获取到rule对象的属性，也能设置属性到rule上
+3. 增加lives配置
+4. 增加drpyS可用的全局函数 `rc4Encrypt` `rc4Decrypt` `rc4` `rc4_decode`
+5. 增加随机ua生成函数 `randomUa.generateUa()`
+6. 增加一个漫画源
+7. batchFetch增加16个一组分组同步请求逻辑
+8. tv订阅允许[盘]类源
+9. 源不定义lazy默认表示嗅探选集链接
+10. 增加 `player.json` 配置一些box所需的播放器参数
+
+### 20241223
+
+更新至V1.0.19
+
+1. 更新部分源
+2. 更新扫码入库代码,支持UC扫码入库可播`闪电优汐[盘]`
+
 ### 20241222
 
 更新至V1.0.18

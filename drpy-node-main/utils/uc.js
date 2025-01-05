@@ -1,5 +1,6 @@
 import req from './req.js';
 import {ENV} from './env.js';
+import COOKIE from './cookieManager.js';
 import '../libs_drpy/crypto-js.js';
 import {join} from 'path';
 import fs from 'fs';
@@ -28,12 +29,15 @@ class UCHandler {
 
     // 使用 getter 定义动态属性
     get cookie() {
-        // log('env.cookie.uc:',ENV.get('uc_cookie'));
+        // console.log('env.cookie.uc:',ENV.get('uc_cookie'));
         return ENV.get('uc_cookie');
     }
 
     getShareData(url) {
         let matches = this.regex.exec(url);
+        if (matches[1].indexOf("?") > 0) {
+            matches[1] = matches[1].split('?')[0];
+        }
         if (matches) {
             return {
                 shareId: matches[1],
@@ -45,9 +49,9 @@ class UCHandler {
 
     async initQuark(db, cfg) {
         if (this.cookie) {
-            log("cookie 获取成功");
+            console.log("cookie 获取成功");
         } else {
-            log("cookie 获取失败")
+            console.log("cookie 获取失败")
         }
     }
 
@@ -152,15 +156,10 @@ class UCHandler {
 
 
     async api(url, data, headers, method, retry) {
-
         headers = headers || {};
-
         Object.assign(headers, this.baseHeader);
-
         Object.assign(headers, {
-
             Cookie: this.cookie || '',
-
         });
         method = method || 'post';
         const resp =
@@ -233,7 +232,6 @@ class UCHandler {
             const shareToken = await this.api(`share/sharepage/token?${this.pr}`, {
                 pwd_id: shareData.shareId,
                 passcode: shareData.sharePwd || '',
-
             });
             if (shareToken.data && shareToken.data.stoken) {
                 this.shareTokenCache[shareData.shareId] = shareToken.data;
@@ -356,6 +354,37 @@ class UCHandler {
 
     }
 
+    async refreshUcCookie(from = '') {
+        const nowCookie = this.cookie;
+        const cookieSelfRes = await axios({
+            url: "https://pc-api.uc.cn/1/clouddrive/config?pr=UCBrowser&fr=pc",
+            method: "GET",
+            headers: {
+                "User-Agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) quark-cloud-drive/2.5.20 Chrome/100.0.4896.160 Electron/18.3.5.4-b478491100 Safari/537.36 Channel/pckk_other_ch',
+                Origin: 'https://drive.uc.cn',
+                Referer: 'https://drive.uc.cn/',
+                Cookie: nowCookie
+            }
+        });
+        const cookieResDataSelf = cookieSelfRes.headers;
+        const resCookie = cookieResDataSelf['set-cookie'];
+        if (!resCookie) {
+            console.log(`${from}自动更新UC cookie: 没返回新的cookie`);
+            return
+        }
+        const cookieObject = COOKIE.parse(resCookie);
+        // console.log(cookieObject);
+        if (cookieObject.__puus) {
+            const oldCookie = COOKIE.parse(nowCookie);
+            const newCookie = COOKIE.stringify({
+                __pus: oldCookie.__pus,
+                __puus: cookieObject.__puus,
+            });
+            console.log(`${from}自动更新UC cookie: ${newCookie}`);
+            ENV.set('uc_cookie', newCookie);
+        }
+    }
+
 
     async getDownload(shareId, stoken, fileId, fileToken, clean) {
 
@@ -376,7 +405,23 @@ class UCHandler {
         });
 
         if (down.data) {
-
+            const low_url = down.data[0].download_url;
+            const low_cookie = this.cookie;
+            const low_headers = {
+                "Referer": "https://drive.uc.cn/",
+                "cookie": low_cookie,
+                "User-Agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) quark-cloud-drive/2.5.20 Chrome/100.0.4896.160 Electron/18.3.5.4-b478491100 Safari/537.36 Channel/pckk_other_ch'
+            };
+            // console.log('low_url:', low_url);
+            const test_result = await this.testSupport(low_url, low_headers);
+            // console.log('test_result:', test_result);
+            if (!test_result[0]) {
+                try {
+                    await this.refreshUcCookie('getDownload');
+                } catch (e) {
+                    console.log(`getDownload:自动刷新UC cookie失败:${e.message}`)
+                }
+            }
             return down.data[0];
 
         }
@@ -408,7 +453,8 @@ class UCHandler {
 
             .catch((err) => {
 
-                console.error(err);
+                // console.error(err);
+                console.error('[testSupport] error:', err.message);
 
                 return err.response || {status: 500, data: {}};
 
@@ -435,7 +481,7 @@ class UCHandler {
             return [isSupport, resp.headers];
 
         } else {
-
+            console.log('[testSupport] resp.status:', resp.status);
             return [false, null];
 
         }

@@ -1,10 +1,15 @@
 import {readdirSync, readFileSync, writeFileSync, existsSync} from 'fs';
 import path from 'path';
 import * as drpy from '../libs/drpyS.js';
-import {naturalSort} from '../utils/utils.js'
+import {naturalSort, urljoin} from '../utils/utils.js'
+import {ENV} from "../utils/env.js";
+import {validatePwd} from "../utils/api_validate.js";
+import {getSitesMap} from "../utils/sites-map.js";
+
+const {jsEncoder} = drpy;
 
 // 工具函数：生成 JSON 数据
-async function generateSiteJSON(jsDir, requestHost, sub, subFilePath) {
+async function generateSiteJSON(jsDir, configDir, requestHost, sub, subFilePath, pwd) {
     const files = readdirSync(jsDir);
     let valid_files = files.filter((file) => file.endsWith('.js') && !file.startsWith('_')); // 筛选出不是 "_" 开头的 .js 文件
     let sort_list = [];
@@ -15,8 +20,14 @@ async function generateSiteJSON(jsDir, requestHost, sub, subFilePath) {
             valid_files = valid_files.filter(it => !(new RegExp(sub.reg || '.*')).test(it));
         }
         let sort_file = path.join(path.dirname(subFilePath), `./order_common.html`);
+        if (!existsSync(sort_file)) {
+            sort_file = path.join(path.dirname(subFilePath), `./order_common.example.html`);
+        }
         if (sub.sort) {
             sort_file = path.join(path.dirname(subFilePath), `./${sub.sort}.html`);
+            if (!existsSync(sort_file)) {
+                sort_file = path.join(path.dirname(subFilePath), `./${sub.sort}.example.html`);
+            }
         }
         if (existsSync(sort_file)) {
             console.log('sort_file:', sort_file);
@@ -27,14 +38,22 @@ async function generateSiteJSON(jsDir, requestHost, sub, subFilePath) {
         }
     }
     let sites = [];
-    for (const file of valid_files) {
+    // console.log('hide_adult:', ENV.get('hide_adult'));
+    if (ENV.get('hide_adult') === '1') {
+        valid_files = valid_files.filter(it => !(new RegExp('\\[[密]\\]|密+')).test(it));
+    }
+    let SitesMap = getSitesMap(configDir);
+    // console.log(SitesMap);
+    // 使用 Promise.all 并发执行文件的处理
+    const filePromises = valid_files.map(async (file) => {
         const baseName = path.basename(file, '.js'); // 去掉文件扩展名
-        const key = `drpyS_${baseName}`;
-        const name = `${baseName}(DS)`;
-        const api = `${requestHost}/api/${baseName}`;  // 使用请求的 host 地址，避免硬编码端口
+        let api = `${requestHost}/api/${baseName}`;  // 使用请求的 host 地址，避免硬编码端口
+        if (pwd) {
+            api += `?pwd=${pwd}`;
+        }
         let ruleObject = {
-            searchable: 1, // 固定值
-            filterable: 1, // 固定值
+            searchable: 0, // 固定值
+            filterable: 0, // 固定值
             quickSearch: 0, // 固定值
         };
         try {
@@ -43,17 +62,59 @@ async function generateSiteJSON(jsDir, requestHost, sub, subFilePath) {
         } catch (e) {
             console.log(`file:${file} error:${e.message}`);
         }
-        const site = {
-            key,
-            name,
-            type: 4, // 固定值
-            api,
-            searchable: ruleObject.searchable,
-            filterable: ruleObject.filterable,
-            quickSearch: ruleObject.quickSearch,
-            ext: "", // 固定为空字符串
-        };
-        sites.push(site);
+        let fileSites = [];
+        if (baseName === 'push_agent') {
+            let key = 'push_agent';
+            let name = `${ruleObject.title}(DS)`;
+            fileSites.push({key, name})
+        } else if (SitesMap.hasOwnProperty(baseName) && Array.isArray(SitesMap[baseName])) {
+            SitesMap[baseName].forEach((it) => {
+                let key = `drpyS_${it.alias}`;
+                let name = `${it.alias}(DS)`;
+                let ext = '';
+                if (it.queryObject.type === 'url') {
+                    ext = it.queryObject.params;
+                } else {
+                    ext = it.queryStr;
+                }
+                if (ext) {
+                    ext = jsEncoder.gzip(ext);
+                }
+                fileSites.push({key: key, name: name, ext: ext})
+            });
+        } else {
+            let key = `drpyS_${baseName}`;
+            let name = `${baseName}(DS)`;
+            fileSites.push({key, name})
+        }
+        fileSites.forEach((fileSite) => {
+            const site = {
+                key: fileSite.key,
+                name: fileSite.name,
+                type: 4, // 固定值
+                api,
+                searchable: ruleObject.searchable,
+                filterable: ruleObject.filterable,
+                quickSearch: ruleObject.quickSearch,
+                more: ruleObject.more,
+                ext: fileSite.ext || "", // 固定为空字符串
+            };
+            sites.push(site);
+        });
+    });
+    // 等待所有的文件处理完成
+    await Promise.all(filePromises);
+    // 订阅再次处理别名的情况
+    if (sub) {
+        if (sub.mode === 0) {
+            sites = sites.filter(it => (new RegExp(sub.reg || '.*')).test(it.name));
+        } else if (sub.mode === 1) {
+            sites = sites.filter(it => !(new RegExp(sub.reg || '.*')).test(it.name));
+        }
+    }
+    // 青少年模式再次处理自定义别名的情况
+    if (ENV.get('hide_adult') === '1') {
+        sites = sites.filter(it => !(new RegExp('\\[[密]\\]|密+')).test(it.name));
     }
     sites = naturalSort(sites, 'name', sort_list);
     return {sites};
@@ -102,6 +163,45 @@ function generateParseJSON(jxDir, requestHost) {
     return {parses};
 }
 
+function generateLivesJSON(requestHost) {
+    let lives = [];
+    let live_url = process.env.LIVE_URL || '';
+    let epg_url = process.env.EPG_URL || ''; // 从.env文件读取
+    let logo_url = process.env.LOGO_URL || ''; // 从.env文件读取
+    if (live_url && !live_url.startsWith('http')) {
+        let public_url = urljoin(requestHost, 'public/');
+        live_url = urljoin(public_url, live_url);
+    }
+    // console.log('live_url:', live_url);
+    if (live_url) {
+        lives.push(
+            {
+                "name": "直播",
+                "type": 0,
+                "url": live_url,
+                "playerType": 1,
+                "ua": "okhttp/3.12.13",
+                "epg": epg_url,
+                "logo": logo_url
+            }
+        )
+    }
+    return {lives}
+}
+
+function generatePlayerJSON(configDir, requestHost) {
+    let playerConfig = {};
+    let playerConfigPath = path.join(configDir, './player.json');
+    if (existsSync(playerConfigPath)) {
+        try {
+            playerConfig = JSON.parse(readFileSync(playerConfigPath, 'utf-8'))
+        } catch (e) {
+
+        }
+    }
+    return playerConfig
+}
+
 function getSubs(subFilePath) {
     let subs = [];
     try {
@@ -115,7 +215,7 @@ function getSubs(subFilePath) {
 
 export default (fastify, options, done) => {
 
-    fastify.get('/index', async (request, reply) => {
+    fastify.get('/index', {preHandler: validatePwd}, async (request, reply) => {
         if (!existsSync(options.indexFilePath)) {
             reply.code(404).send({error: 'index.json not found'});
             return;
@@ -126,9 +226,10 @@ export default (fastify, options, done) => {
     });
 
     // 接口：返回配置 JSON，同时写入 index.json
-    fastify.get('/config*', async (request, reply) => {
+    fastify.get('/config*', {preHandler: validatePwd}, async (request, reply) => {
         let t1 = (new Date()).getTime();
         const query = request.query; // 获取 query 参数
+        const pwd = query.pwd || '';
         const sub_code = query.sub || '';
         const cfg_path = request.params['*']; // 捕获整个路径
         try {
@@ -148,9 +249,11 @@ export default (fastify, options, done) => {
                 }
             }
 
-            const siteJSON = await generateSiteJSON(options.jsDir, requestHost, sub, options.subFilePath);
+            const siteJSON = await generateSiteJSON(options.jsDir, options.configDir, requestHost, sub, options.subFilePath, pwd);
             const parseJSON = generateParseJSON(options.jxDir, requestHost);
-            const configObj = {sites_count: siteJSON.sites.length, ...siteJSON, ...parseJSON};
+            const livesJSON = generateLivesJSON(requestHost);
+            const playerJSON = generatePlayerJSON(options.configDir, requestHost);
+            const configObj = {sites_count: siteJSON.sites.length, ...siteJSON, ...parseJSON, ...livesJSON, ...playerJSON};
             // console.log(configObj);
             const configStr = JSON.stringify(configObj, null, 2);
             if (!process.env.VERCEL) { // Vercel 环境不支持写文件，关闭此功能
@@ -160,8 +263,10 @@ export default (fastify, options, done) => {
                 }
             }
             let t2 = (new Date()).getTime();
-            configObj.cost = t2 - t1;
-            reply.send(configObj);
+            let cost = t2 - t1;
+            // configObj.cost = cost;
+            // reply.send(configObj);
+            reply.send(Object.assign({cost}, configObj));
         } catch (error) {
             reply.status(500).send({error: 'Failed to generate site JSON', details: error.message});
         }
