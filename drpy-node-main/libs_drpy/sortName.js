@@ -410,13 +410,16 @@ function mkResult(arr) {
     }
     return arrResult;
 }
+
 //两端去空格函数
-String.prototype.trim = function() { return this.replace(/(^\s*)|(\s*$)/g, ""); }
+String.prototype.trim = function () {
+    return this.replace(/(^\s*)|(\s*$)/g, "");
+}
 
 //参数——中文字符串
 //返回值——拼音首字母串数组
 export function getFirstLetterList(str) {
-    if (typeof(str) != "string")
+    if (typeof (str) != "string")
         throw new Error(-1, "请传入字符串类型的参数!");
     const arrResult = []; //保存中间结果的数组
     let i = 0, len = str.length;
@@ -441,11 +444,11 @@ function isChinese(char) {
 }
 
 // 中文拼音名称排序
-export const sortListByCN = (vodList,key,order) => {
-    if(!key){
+export const sortListByCN = (vodList, key, order) => {
+    if (!key) {
         return vodList
     }
-    order = order||'asc'; // 默认正序
+    order = order || 'asc'; // 默认正序
     let ASCarr = vodList.sort((a, b) => {
         a = a[key];
         b = b[key];
@@ -493,7 +496,7 @@ export const sortListByCN = (vodList,key,order) => {
                     let pinyinA = getFirstLetterList(a[index]).toString();
                     let pinyinB = getFirstLetterList(b[index]).toString();
 
-                    result = pinyinA.localeCompare(pinyinB, 'zh-Hans-CN', { sensitivity: 'accent' });
+                    result = pinyinA.localeCompare(pinyinB, 'zh-Hans-CN', {sensitivity: 'accent'});
                 }
 
                 // 若已经比较出结果，则跳出循环，不再继续比较剩余字符
@@ -503,21 +506,21 @@ export const sortListByCN = (vodList,key,order) => {
             }
 
             // 只要有一个无法转换为数字——转换为字符串进行比较——先按字符排序，然后按照数字排序
-            return result || a.toString().localeCompare(b.toString(), 'zh-Hans-CN', { sensitivity: 'accent' });
+            return result || a.toString().localeCompare(b.toString(), 'zh-Hans-CN', {sensitivity: 'accent'});
         } else {
             // 都能转换为数字——转换为数字进行比较——从小到大排序
             return Number(a) - Number(b);
         }
     });
-    if(order==='desc'){
+    if (order === 'desc') {
         ASCarr.reverse();
     }
     return ASCarr
 };
 
 // 首字母开头排序
-export const sortListByFirst = (vodList,key) => {
-    key = key||'vod_name';
+export const sortListByFirst = (vodList, key) => {
+    key = key || 'vod_name';
     // 名字以特殊符号开头的应用列表
     const symbol_list = [];
     // 名字以中文开头的应用列表
@@ -528,7 +531,7 @@ export const sortListByFirst = (vodList,key) => {
     const num_list = [];
 
     vodList.forEach((vod) => {
-        const { vod_name } = vod;
+        const {vod_name} = vod;
         //通过正则进行数据分类
         if (/[\u4e00-\u9fa5]/.test(vod_name[0])) {
             cn_list.push(vod);

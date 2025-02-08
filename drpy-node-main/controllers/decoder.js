@@ -1,5 +1,5 @@
 import {getOriginalJs, jsDecoder} from '../libs/drpyS.js';
-import {readFileSync, existsSync} from 'fs';
+import {existsSync, readFileSync} from 'fs';
 import path from "path";
 
 // 仅仅支持json post 如: {"code":"xxx"}

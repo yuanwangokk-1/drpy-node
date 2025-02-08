@@ -9,7 +9,8 @@
 
 ---
 
-`crypto-js-wasm` 是基于 JavaScript 和 [WebAssembly](https://webassembly.org/) 的哈希与加密算法库，其灵感来自于[crypto-js](https://github.com/brix/crypto-js)。
+`crypto-js-wasm` 是基于 JavaScript 和 [WebAssembly](https://webassembly.org/)
+的哈希与加密算法库，其灵感来自于[crypto-js](https://github.com/brix/crypto-js)。
 
 - **安全**: 得益于 WebAssembly ，crypto-js-wasm的计算过程是**不可见、不可中断**的
 - **高效**: 相比于crypto-js，计算效率最高提升了16倍(见 [Benchmark](https://originjs.org/WASM-benchmark/#/))
@@ -18,13 +19,9 @@
 - **全能**: 支持**15+** 以上的哈希和加密算法，包括常用的 MD5、 SHA-x、 AES、RC4等
 - **ESM**: 基于ESM语法编写，编译为UMD以保证兼容性
 
-
-
 ## 最新消息
 
 当前已经支持RSA和TypeScript!
-
-
 
 ## 安装
 
@@ -43,8 +40,6 @@ pnpm install @originjs/crypto-js-wasm
 ```bash
 yarn add @originjs/crypto-js-wasm
 ```
-
-
 
 ## 使用
 
@@ -69,6 +64,7 @@ CryptoJSW.SHA256.loadWasm().then(() => {
 ```
 
 wasm加载,其中wb变量为wasm二进制文件的base64编码文本
+
 ```javascript
 // 加载 WebAssembly 模块
 const wasmModule = new WebAssembly.Module(Uint8Array.from(atob(wb), c => c.charCodeAt(0)));
@@ -76,13 +72,13 @@ const wasmModule = new WebAssembly.Module(Uint8Array.from(atob(wb), c => c.charC
 
 需要注意的是，`HMAC` 没有`loadWasm`，因为如果要使用`HMAC`，必须指定哈希（例如`HmacSHA1`）。
 
-同时， `pbkdf2` 中的 `loadWasm` 实现是调用了 `SHA1.loadWasm` ，这是因为 `SHA1` 是 `pbkdf2` 的默认哈希算法。 如果指定了另一个哈希算法，则应分别调用该哈希算法对应的 `loadWasm`。 `evpkdf`/`MD5` 的情况与之类似， `MD5` 是 `evpkdf` 的默认哈希算法。
+同时， `pbkdf2` 中的 `loadWasm` 实现是调用了 `SHA1.loadWasm` ，这是因为 `SHA1` 是 `pbkdf2` 的默认哈希算法。
+如果指定了另一个哈希算法，则应分别调用该哈希算法对应的 `loadWasm`。 `evpkdf`/`MD5` 的情况与之类似， `MD5` 是 `evpkdf`
+的默认哈希算法。
 
 **RSA使用说明**
 
 请参考[这篇文档](./rsa-CN.md).
-
-
 
 **目前可用的算法**
 
@@ -110,37 +106,25 @@ const wasmModule = new WebAssembly.Module(Uint8Array.from(atob(wb), c => c.charC
 
 - RSA
 
-
-
 ## Benchmark
 
 以下 benchmark 结果运行自一台台式机 (i5-4590, 16 GB RAM, Windows 10 Version 21H2 (OSBuild 19044, 1466))。
-
-
 
 *Chrome 102.0.5005.63:*
 
 ![benchmark_chrome](benchmark/benchmark_chrome.png)
 
-
-
 *Firefox 101.0:*
 
 ![benchmark_firefox](benchmark/benchmark_firefox.png)
-
-
 
 *Nodejs v16.6.4:*
 
 ![nodejs](benchmark/benchmark_nodejs.png)
 
-
-
 *RSA(vs jsencrypt) in Chrome:*
 
 ![rsa_chrome](benchmark/benchmark_chrome_rsa.png)
-
-
 
 ## 开发
 
@@ -158,21 +142,17 @@ pnpm run test
 pnpm run coverage
 ```
 
-
-
 #### 为何我们需要调用异步的 loadWasm？
 
 这是因为 WebAssembly 二进制需要通过 `WebAssembly.instantiate` 加载，并且这是一个异步函数。
 
-`WebAssembly.instantiate `与它的同步实现 `WebAssembly.instance` 相比，前者更受推荐；并且，在许多场景下，`WebAssembly.instance` 无法加载不够小的 WebAssembly 二进制。
-
-
+`WebAssembly.instantiate `与它的同步实现 `WebAssembly.instance` 相比，前者更受推荐；并且，在许多场景下，
+`WebAssembly.instance` 无法加载不够小的 WebAssembly 二进制。
 
 #### 为何我们需要以base64编码字符的方式，存储wasm二进制？
 
-因为 `crypto-js-wasm` 需要同时支持 `browser` 和 `nodejs` 两种使用场景。相比与 `browser` 中的 `wasm loader` (多数情况下由 webpack, vite 或其他框架提供)以及 `nodejs` 中的 `fs` 方式，这种wasm二进制存储方式是一种相对优雅的方式。
-
-
+因为 `crypto-js-wasm` 需要同时支持 `browser` 和 `nodejs` 两种使用场景。相比与 `browser` 中的 `wasm loader` (多数情况下由
+webpack, vite 或其他框架提供)以及 `nodejs` 中的 `fs` 方式，这种wasm二进制存储方式是一种相对优雅的方式。
 
 ## 版权说明
 

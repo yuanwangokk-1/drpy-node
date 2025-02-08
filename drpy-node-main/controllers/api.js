@@ -25,6 +25,7 @@ export default (fastify, options, done) => {
             // 根据请求方法选择参数来源
             const query = method === 'GET' ? request.query : request.body;
             const moduleExt = query.extend || '';
+            // console.log('moduleExt:', typeof moduleExt, moduleExt);
             const protocol = request.protocol;
             const hostname = request.hostname;
             // const proxyUrl = `${protocol}://${hostname}${request.url}`.split('?')[0].replace('/api/', '/proxy/') + '/?do=js';
@@ -110,6 +111,7 @@ export default (fastify, options, done) => {
                 // 根据 query 参数决定执行逻辑
                 if ('play' in query) {
                     // 处理播放逻辑
+                    // console.log('play query:', query);
                     const result = await drpy.play(modulePath, env, query.flag, query.play);
                     return reply.send(result);
                 }
@@ -255,7 +257,7 @@ export default (fastify, options, done) => {
                 }
                 // return proxyStreamMediaMulti(content, new_headers, request, reply); // 走  流式代理
                 // 将查询参数构建为目标 URL
-                const redirectUrl = `/mediaProxy?url=${encodeURIComponent(content)}&headers=${encodeURIComponent(new_headers)}&thread=${ENV.get('thread') || 1}`;
+                const redirectUrl = `/mediaProxy?url=${encodeURIComponent(content)}&headers=${encodeURIComponent(JSON.stringify(new_headers))}&thread=${ENV.get('thread') || 1}`;
                 // 执行重定向
                 return reply.redirect(redirectUrl);
             }
@@ -349,8 +351,13 @@ export default (fastify, options, done) => {
                 }
                 let t2 = (new Date()).getTime();
                 backResp.cost = t2 - t1;
-                return reply.code(statusCode).type(`${mediaType}; charset=utf-8`).send(JSON.stringify(backResp));
+                let backRespSend = JSON.stringify(backResp);
+                console.log(backRespSend);
+                return reply.code(statusCode).type(`${mediaType}; charset=utf-8`).send(backRespSend);
             } else if (typeof backResp === 'string') {
+                if (backResp.startsWith('redirect://')) {
+                    return reply.redirect(backResp.split('redirect://')[1]);
+                }
                 let statusCode = backResp && backResp !== query.url ? 200 : 404;
                 let msgState = backResp && backResp !== query.url ? '成功' : '失败';
                 let t2 = (new Date()).getTime();
@@ -360,7 +367,9 @@ export default (fastify, options, done) => {
                     msg: `${jxName}解析${msgState}`,
                     cost: t2 - t1
                 }
-                return reply.code(statusCode).type(`${mediaType}; charset=utf-8`).send(JSON.stringify(result));
+                let backRespSend = JSON.stringify(result);
+                console.log(backRespSend);
+                return reply.code(statusCode).type(`${mediaType}; charset=utf-8`).send(backRespSend);
             } else {
                 return reply.status(404).send({error: `${jxName}解析失败`});
             }

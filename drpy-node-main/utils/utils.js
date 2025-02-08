@@ -38,6 +38,18 @@ export function computeHash(content) {
     return crypto.createHash('sha256').update(content, 'utf8').digest('hex');
 }
 
+/**
+ * 将obj所有key变小写
+ * @param obj
+ */
+export function keysToLowerCase(obj) {
+    return Object.keys(obj).reduce((result, key) => {
+        const newKey = key.toLowerCase();
+        result[newKey] = obj[key]; // 如果值也是对象，可以递归调用本函数
+        return result;
+    }, {});
+}
+
 export const deepCopy = cloneDeep
 
 const resolve = (from, to) => {
@@ -64,6 +76,26 @@ export const urljoin = (fromPath, nowPath) => {
 export const urljoin2 = urljoin
 export const joinUrl = urljoin
 
+export const updateQueryString = (originalUrl, newQuery) => {
+    // 解析原始 URL
+    const parsedUrl = new URL(originalUrl);
+
+    // 如果 newQuery 是空字符串或只包含 '?'，则直接返回原始 URL
+    if (newQuery === '' || newQuery === '?') {
+        return parsedUrl.href;
+    }
+
+    // 解析新的查询参数
+    const newQueryParams = new URLSearchParams(newQuery.slice(1)); // 去掉前面的 '?'
+
+    // 将新的查询参数添加到原始 URL 的查询参数中
+    newQueryParams.forEach((value, key) => {
+        parsedUrl.searchParams.append(key, value);
+    });
+
+    // 生成更新后的 URL
+    return decodeURIComponent(parsedUrl.href);
+};
 
 export function naturalSort(arr, key, customOrder = []) {
     return arr.sort((a, b) => {
@@ -71,8 +103,8 @@ export function naturalSort(arr, key, customOrder = []) {
         const bValue = b[key];
 
         // 检查是否在自定义排序列表中
-        const aIndex = customOrder.findIndex((item) => aValue.startsWith(item));
-        const bIndex = customOrder.findIndex((item) => bValue.startsWith(item));
+        const aIndex = customOrder.findIndex((item) => aValue.includes(item));
+        const bIndex = customOrder.findIndex((item) => bValue.includes(item));
 
         if (aIndex !== -1 && bIndex !== -1) {
             // 如果都在自定义列表中，按自定义顺序排序
@@ -105,8 +137,8 @@ export function naturalSort(arr, key, customOrder = []) {
         const y = b[key] || '';
 
         // 1. 检查自定义顺序
-        const xIndex = customOrder.findIndex((item) => x.startsWith(item));
-        const yIndex = customOrder.findIndex((item) => y.startsWith(item));
+        const xIndex = customOrder.findIndex((item) => x.includes(item));
+        const yIndex = customOrder.findIndex((item) => y.includes(item));
 
         if (xIndex !== -1 || yIndex !== -1) {
             if (xIndex === -1) return 1; // x 不在自定义顺序中，y 在
@@ -143,8 +175,8 @@ export function naturalSortAny(arr, key, customOrder = []) {
         const y = normalize(b[key]).replace(sre, '') || '';
 
         // Check custom order first
-        const xIndex = customOrder.findIndex((item) => x.startsWith(item));
-        const yIndex = customOrder.findIndex((item) => y.startsWith(item));
+        const xIndex = customOrder.findIndex((item) => x.includes(item));
+        const yIndex = customOrder.findIndex((item) => y.includes(item));
 
         if (xIndex !== -1 || yIndex !== -1) {
             if (xIndex === -1) return GREATER; // x not in customOrder, y is
@@ -191,3 +223,10 @@ export function naturalSortAny(arr, key, customOrder = []) {
         return EQUAL;
     });
 }
+
+export const $js = {
+    toString(func) {
+        let strfun = func.toString();
+        return strfun.replace(/^\(\)(\s+)?=>(\s+)?\{/, "js:").replace(/\}$/, '');
+    }
+};

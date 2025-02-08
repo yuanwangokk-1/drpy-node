@@ -1,4 +1,4 @@
-import {readFileSync, existsSync} from 'fs';
+import {existsSync, readFileSync} from 'fs';
 import path from 'path';
 import {ENV} from '../utils/env.js';
 import COOKIE from '../utils/cookieManager.js';

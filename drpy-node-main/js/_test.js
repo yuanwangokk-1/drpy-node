@@ -1,17 +1,19 @@
 // js/_test.js
 console.log('加载test...')
-globalThis.check = ()=>{
+globalThis.check = () => {
     console.log('check...')
 }
-check1 = ()=>{
+check1 = () => {
     console.log('check1...')
 }
 sleepSync(2000);
 console.log('睡眠了200ms')
-async function test1(){
+
+async function test1() {
     await sleep(200);
     console.log('test1睡眠完毕11')
 }
+
 console.log('test1定义完毕')
 var rule = {
     title: '标题1',
@@ -43,16 +45,16 @@ var rule = {
             {vod_name: '测试电影2', vod_pic: '2.png', vod_remarks: '测试描述2', vod_id: 'http://www.2.com'},
         ]
     },
-    一级: async function(tid, pg, filter, extend) {
-        let {input,MY_URL} = this;
-        console.log({tid,pg,filter,extend});
+    一级: async function (tid, pg, filter, extend) {
+        let {input, MY_URL} = this;
+        console.log({tid, pg, filter, extend});
         console.log(`input:${input},MY_URL:${MY_URL}`);
         console.log(rule.host);
         console.log(rule.host.rstrip('/'));
         // log(typeof jsonpath)
         // log(jsonpath({path:'$.title',json:rule}))
         log(MOBILE_UA);
-        log(jsonpath.query(rule,'$.title'));
+        log(jsonpath.query(rule, '$.title'));
         return `input:${input},MY_URL:${MY_URL},host:${rule.host.rstrip('/')}`
     },
     二级: async () => {

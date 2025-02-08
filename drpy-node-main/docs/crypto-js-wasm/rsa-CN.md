@@ -36,7 +36,8 @@ RSA的配置项应为一个object, 可以包含如下属性:
 当 `key`是`string`类型时: 可以是RSA key文件的路径, 也可以是RSA key的内容.
 
 - RSA key的内容: 应当以 `-----BEGIN PRIVATE KEY-----`或`-----BEGIN PUBLIC KEY-----`开始. 同时在`browser`和`nodejs`环境下可用.
-- RSA key文件的路径: 不以`-----BEGIN PRIVATE KEY-----`或`-----BEGIN PUBLIC KEY-----`开始的字符串，将被视作key文件的路径. 只在`nodejs`环境下可用.
+- RSA key文件的路径: 不以`-----BEGIN PRIVATE KEY-----`或`-----BEGIN PUBLIC KEY-----`开始的字符串，将被视作key文件的路径.
+  只在`nodejs`环境下可用.
 
 当 `key`是`number`类型时: RSA key的位长. 我们会根据这个位长重新生成一对RSA公钥和私钥.
 
@@ -48,9 +49,8 @@ RSA的配置项应为一个object, 可以包含如下属性:
 
 需要注意的是, RSA私钥可以生成公钥, 因此当配置了RSA私钥时, 对应的RSA公钥也会生成. 但是RSA公钥**不能**生成私钥.
 
-RSA私钥在 `decrypt`和`sign`调用时需要用到, 因此, 如果没有配置RSA私钥, 在调用`decrypt`, `sign`, `generateKeyFile`(生成`pairs`/`private`时) and `getKeyContent`(获取私钥时)时会报错.
-
-
+RSA私钥在 `decrypt`和`sign`调用时需要用到, 因此, 如果没有配置RSA私钥, 在调用`decrypt`, `sign`, `generateKeyFile`(生成
+`pairs`/`private`时) and `getKeyContent`(获取私钥时)时会报错.
 
 配置项可以通过如下方式进行配置:
 
@@ -147,9 +147,12 @@ expect(new TextDecoder().decode(decrypted)).toBe(msg);
 
 ### 摘要, 签名和验签
 
-你可以用`md5`, `sha1`或其他hash算法自行生成摘要, 但是我们建议你使用`RSA.digest`方法生成密钥, 这是因为你生成密钥所用的hash算法必须与`sign`和`verify`时的一致. 通过使用`RSA.digest`, 我们可以保证`digest`, `sign`和`verify`中hash算法的一致性.
+你可以用`md5`, `sha1`或其他hash算法自行生成摘要, 但是我们建议你使用`RSA.digest`方法生成密钥, 这是因为你生成密钥所用的hash算法必须与
+`sign`和`verify`时的一致. 通过使用`RSA.digest`, 我们可以保证`digest`, `sign`和`verify`中hash算法的一致性.
 
-You can get the digest using hash algorithms like `md5`, `sha1` or other ones by yourself. But it's recommended to use `RSA.digest`, because the hasher you used in `digest` must be the same with the ones in `sign` and `verify`. By using `RSA.digest`, we can assure the consistency of the hasher in `digest`, `sign` and `verify`.
+You can get the digest using hash algorithms like `md5`, `sha1` or other ones by yourself. But it's recommended to use
+`RSA.digest`, because the hasher you used in `digest` must be the same with the ones in `sign` and `verify`. By using
+`RSA.digest`, we can assure the consistency of the hasher in `digest`, `sign` and `verify`.
 
 ```javascript
 import C from '@originjs/crypto-js-wasm';
@@ -167,13 +170,15 @@ expect(C.RSA.verify(errorDigest, signature)).toBe(false);
 
 ### 注意
 
-`initFromKeyFile` 和 `generateKeyFile` 的内部实现依赖于 `nodejs` 的 `fs`(因为他们就是设计用来从文件中读取，或写入文件的)，这意味着他们不能在浏览器中使用。如果在非`nodejs`环境使用他们，我们会报错，但是方法内部所使用的`fs`在`webpack`中还是可能报错：
+`initFromKeyFile` 和 `generateKeyFile` 的内部实现依赖于 `nodejs` 的 `fs`(因为他们就是设计用来从文件中读取，或写入文件的)
+，这意味着他们不能在浏览器中使用。如果在非`nodejs`环境使用他们，我们会报错，但是方法内部所使用的`fs`在`webpack`中还是可能报错：
 
 ```shell
 Module not found: Error: Can't resolve 'fs' in '...\node_modules\@originjs\crypto-js-wasm\lib'
 ```
 
-对于 `webpack > 5`, 你可以在 `webpack.config.js` 中添加如下配置来避免此报错(通过[这个issue](https://github.com/webpack-contrib/css-loader/issues/447)可以查看更多细节):
+对于 `webpack > 5`, 你可以在 `webpack.config.js` 中添加如下配置来避免此报错(
+通过[这个issue](https://github.com/webpack-contrib/css-loader/issues/447)可以查看更多细节):
 
 ```javascript
 module.exports = {

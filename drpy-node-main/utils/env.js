@@ -1,6 +1,6 @@
 import path from "path";
 import {fileURLToPath} from "url";
-import {existsSync, readFileSync, writeFileSync, unlinkSync} from "fs";
+import {existsSync, readFileSync, unlinkSync, writeFileSync} from "fs";
 import {LRUCache} from "lru-cache";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

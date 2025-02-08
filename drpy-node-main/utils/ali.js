@@ -25,6 +25,16 @@ class AliDrive {
         };
     }
 
+    get token() {
+        // console.log('env.cookie.quark:',ENV.get('quark_cookie'));
+        return ENV.get('ali_token');
+    }
+
+    get ali_refresh_token() {
+        // console.log('env.cookie.quark:',ENV.get('quark_cookie'));
+        return ENV.get('ali_refresh_token');
+    }
+
     // 初始化方法，加载本地配置
     async init() {
         if (this.token) {
@@ -44,16 +54,6 @@ class AliDrive {
                 console.log('阿里ali_refresh_token获取成功：' + this.ali_refresh_token)
             }
         }
-    }
-
-    get token() {
-        // console.log('env.cookie.quark:',ENV.get('quark_cookie'));
-        return ENV.get('ali_token');
-    }
-
-    get ali_refresh_token() {
-        // console.log('env.cookie.quark:',ENV.get('quark_cookie'));
-        return ENV.get('ali_refresh_token');
     }
 
     // 从分享链接中提取分享ID和文件夹ID

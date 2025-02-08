@@ -2,7 +2,7 @@
 // http://localhost:5757/api/番薯动漫[漫]?ac=detail&ids=/voddetail/USJJJJJk.html
 // http://localhost:5757/api/番薯动漫[漫]?wd=我的&pg=1
 // http://localhost:5757/api/番薯动漫[漫]?play=/vodplay/USJJJJJk-2-1.html&flag=由qq倾情打造
-const { getHtml } = $.require('./_lib.request.js')
+const {getHtml} = $.require('./_lib.request.js')
 
 
 const UA = randomUa.generateUa(1, {
@@ -338,7 +338,7 @@ var rule = {
         return []
     },
     一级: async function (tid, pg, filter, extend) {
-        let { MY_CATE, input } = this;
+        let {MY_CATE, input} = this;
         let html;
         if (extend.class === "20" || extend.class === "21") {
             html = (await _req(`${rule.host}/vodshow/${tid}--------${pg}---.html`)).content;
@@ -364,7 +364,7 @@ var rule = {
         return videos
     },
     二级: async function (ids) {
-        let { input } = this;
+        let {input} = this;
         const html = (await _req(rule.host + ids[0])).content
         const $ = pq(html);
         let vod = {
@@ -383,7 +383,7 @@ var rule = {
         return vod
     },
     搜索: async function (wd, quick, pg) {
-        let { input } = this;
+        let {input} = this;
         let ck = await verifyCode(
             rule.host + "/index.php/verify/index.html?",
             {
@@ -420,7 +420,7 @@ var rule = {
         return videos
     },
     lazy: async function (flag, id, flags) {
-        let { input } = this;
+        let {input} = this;
         const html = (await _req(rule.host + id)).content;
         eval(html.match(/player_aaaa[\s\S]*?(?=<\/script>)/)[0])
         let purl = "https://api.bytegooty.com//?url=" + player_aaaa.url
@@ -430,10 +430,11 @@ var rule = {
         let play_url = "";
         try {
             const sortByKey = (_0x2df378, _0x5d56c7, _0x3a5216) => _0x5d56c7.sort(({
-                [_0x2df378]: _0x258bb0
-            }, {
-                [_0x2df378]: _0x58eebd
-            }) => _0x3a5216(_0x258bb0, _0x58eebd))
+                                                                                       [_0x2df378]: _0x258bb0
+                                                                                   }, {
+                                                                                       [_0x2df378]: _0x58eebd
+                                                                                   }) => _0x3a5216(_0x258bb0, _0x58eebd))
+
             function decrypt(_0x29c3c3) {
                 let _0x9d66e = $("meta[name=\"viewport\"]").attr("id").replace("now_", ""),
                     _0x165aac = $("meta[charset=\"UTF-8\"]").attr("id").replace("now_", ""),
@@ -460,16 +461,18 @@ var rule = {
                     });
                 return _0x477cb9.toString(CryptoJS.enc.Utf8);
             }
+
             play_url = decrypt(config.url)
         } catch (error) {
             console.log(error)
         }
-        return { parse: 0, url: play_url }
+        return {parse: 0, url: play_url}
     },
 };
 
 const expireTime = 60 * 5 * 1000;  // 设置cookie过期时间，单位毫秒
 let timeA = new Date().getTime();
+
 async function _req(url, opt) {
     let timeB = new Date().getTime();
     if (!rule.headers.cookie || timeB - timeA > expireTime) {
@@ -516,10 +519,10 @@ async function getJwt() {
         };
         const screen = {
             width: misc.rand(1536, 1536 + 300),
-            height: + misc.rand(864, 864 + 300),
+            height: +misc.rand(864, 864 + 300),
         };
-        const wasmBuffer = await axios.get("https://challenge.rivers.chaitin.cn/challenge/v2/calc.wasm", { responseType: 'arraybuffer' });
-        const rootResp = await retryRequest("https://www.fsdm02.com/", { headers: { "User-Agent": UA } }, async resp => {
+        const wasmBuffer = await axios.get("https://challenge.rivers.chaitin.cn/challenge/v2/calc.wasm", {responseType: 'arraybuffer'});
+        const rootResp = await retryRequest("https://www.fsdm02.com/", {headers: {"User-Agent": UA}}, async resp => {
             await sleep(500);
             if (resp.content.match(/502 Bad Gatewa/)) return true
         }, 3);
@@ -529,7 +532,7 @@ async function getJwt() {
         const issueJson = (await axios.post("https://challenge.rivers.chaitin.cn/challenge/v2/api/issue", {
             client_id: clientId,
             level
-        }, { headers: { "Content-Type": "application/json" } })).data;
+        }, {headers: {"Content-Type": "application/json"}})).data;
 
         function u(e, t) {
             return ({
@@ -539,7 +542,7 @@ async function getJwt() {
             })
         }
 
-        WebAssembly.instantiate(wasmBuffer.data).then(({ instance }) => {
+        WebAssembly.instantiate(wasmBuffer.data).then(({instance}) => {
             let n = {};
             n.data = (u(function (e) {
                 return instance.exports.reset(),
@@ -550,6 +553,7 @@ async function getJwt() {
                         return instance.exports.ret()
                     })
             }, issueJson.data))
+
             function generateRandomString(length) {
                 const characters = '0123456789abcdefghijklmnopqrstuvwxyz';
                 let result = '';
@@ -562,6 +566,7 @@ async function getJwt() {
 
                 return result;
             }
+
             const visitorId = generateRandomString(32);
             axios.post("https://challenge.rivers.chaitin.cn/challenge/v2/api/verify", {
                 issue_id: n.data.issue_id,
@@ -626,7 +631,7 @@ async function verifyCode(imgUrl, verifyUrlOpt, num = 1) {
         let validate = (await ocrByb64(imgResp.content)).response.content;
         let setCookie = imgResp.headers["set-cookie"];
         cookie = [setCookie].flat().map(it => it.replace(/;.*/, '')).join(";");
-        let { url: vurl, ...vopt } = JSON.parse(JSON.stringify(verifyUrlOpt)
+        let {url: vurl, ...vopt} = JSON.parse(JSON.stringify(verifyUrlOpt)
             .replace(/\$cookie/g, cookie)
             .replace(/\$code/g, validate)
         )

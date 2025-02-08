@@ -5,13 +5,13 @@
  支持m3u类直播，支持线路归并。支持筛选切换显示模式
  [
  {
-    "name": "GitHub",
-    "url": "https://ghproxy.net/https://raw.githubusercontent.com/ssili126/tv/main/itvlist.txt"
-  },
+ "name": "GitHub",
+ "url": "https://ghproxy.net/https://raw.githubusercontent.com/ssili126/tv/main/itvlist.txt"
+ },
  {
-    "name": "CNTV",
-    "url": "./live_cntv.txt"
-  }
+ "name": "CNTV",
+ "url": "./live_cntv.txt"
+ }
  ]
  */
 
@@ -19,8 +19,10 @@ const __ext = {data_dict: {}};
 var rule = {
     title: '直播转点播[合]',
     author: '道长',
-    version: '20240628 beta7',
+    version: '20250123 beta1',
     update_info: `
+20250123 beta1:
+1. 配置文件支持带请求头设置
 20240628 beta6:
 1.增加范冰冰v6源
 2.修复带图标的m3u源识别
@@ -248,7 +250,7 @@ var rule = {
                         }
                         __ext.data_dict[_get_url] = html;
                     }
-                    let a = new RegExp(`.*?${_tab.replace('(','\\(').replace(')','\\)')}[,，]#[\\s\\S].*?#`);
+                    let a = new RegExp(`.*?${_tab.replace('(', '\\(').replace(')', '\\)')}[,，]#[\\s\\S].*?#`);
                     let b = html.match(a)[0];
                     let c = html.split(b)[1];
                     if (c.match(/.*?[,，]#[\s\S].*?#/)) {
@@ -353,11 +355,16 @@ var rule = {
     },
     lazy: async function (flag, id, flags) {
         let {input} = this;
+        let liveObj = __ext.data.find(it => it.name === flag.split('|')[0].split('@')[0]);
+        // log('liveObj:', liveObj);
         if (/\.(m3u8|mp4)/.test(input)) {
             if (input.includes('?')) {
                 input = id;
             }
             input = {parse: 0, url: input}
+            if (liveObj && liveObj.headers) {
+                input.header = liveObj.headers
+            }
         } else if (/yangshipin|1905\.com/.test(input)) {
             input = {parse: 1, jx: 0, url: input, js: '', header: {'User-Agent': PC_UA}, parse_extra: '&is_pc=1'};
         }

@@ -11,11 +11,11 @@ var rule = {
     class_parse: async () => {
         log(btoa('123456'));
         log(misc.randMAC());
-        log(getRandomFromList(['drpy','drpyS','hipy']));
+        log(getRandomFromList(['drpy', 'drpyS', 'hipy']));
         // return {}
     },
-    headers:{
-        'User-Agent':'PC_UA',
+    headers: {
+        'User-Agent': 'PC_UA',
     },
     预处理: async () => {
     },
@@ -23,13 +23,13 @@ var rule = {
         // globalThis.fetch_params = {'ua':'xxxx'} // 移除fetch_params,因为不能局部变量，全局变量会导致串数据
         // let html = await request('https://www.baidu.com/')
         // log(html)
-        log(typeof RULE_CK,RULE_CK);
+        log(typeof RULE_CK, RULE_CK);
         RULE_CK = 'xxx2';
         return []
     },
     一级: async (tid, pg, filter, extend) => {
         console.log(input);
-        console.log({tid,pg,filter,extend});
+        console.log({tid, pg, filter, extend});
         console.log(rule.host);
         console.log(rule.host.rstrip('/'));
     },

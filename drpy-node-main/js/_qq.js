@@ -2,14 +2,14 @@ var rule = {
     title: '_qq测试源',
     description: '这是描述',
     category: '视频',
-    host:'https://github.com/hjdhnx/drpy-node',
+    host: 'https://github.com/hjdhnx/drpy-node',
     headers: {
         'User-Agent': 'PC_UA',
     },
-    hostJs:async function(){
+    hostJs: async function () {
         let {HOST} = this;
-        log('HOST:',HOST);
-        log('request:',typeof request);
+        log('HOST:', HOST);
+        log('request:', typeof request);
         return 'https://www.baidu.com';
     },
     class_parse: async () => {
@@ -32,7 +32,7 @@ var rule = {
     },
     推荐: async function (...args) {
         console.log('执行了推荐函数');
-        log('rule.title',rule.title);
+        log('rule.title', rule.title);
         // log(typeof (getProxyUrl));
         // log(getProxyUrl());
         let {getProxyUrl} = this;

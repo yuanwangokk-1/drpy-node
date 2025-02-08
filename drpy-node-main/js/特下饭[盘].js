@@ -62,10 +62,12 @@ var rule = {
         }
         let playform = []
         let playurls = []
+        let playPans = [];
         for (const item of $('.module-row-title')) {
             const a = $(item).find('p:first')[0];
             let link = a.children[0].data.trim()
             if (/drive.uc.cn/.test(link)) {
+                playPans.push(link);
                 const shareData = UC.getShareData(link);
                 if (shareData) {
                     const videos = await UC.getFilesByShareUrl(shareData);
@@ -82,6 +84,7 @@ var rule = {
                 }
             }
             if (/pan.quark.cn/.test(link)) {
+                playPans.push(link);
                 const shareData = Quark.getShareData(link);
                 if (shareData) {
                     const videos = await Quark.getFilesByShareUrl(shareData);
@@ -100,28 +103,27 @@ var rule = {
         }
         vod.vod_play_from = playform.join("$$$")
         vod.vod_play_url = playurls.join("$$$")
+        vod.vod_play_pan = playPans.join("$$$")
         return vod
     },
     搜索: async function (wd, quick, pg) {
-        let {input} = this
-        let html = (await getHtml(input)).data
-        const $ = pq(html)
-        let videos = []
-        $('.module-items .module-search-item').each((index, item) => {
-            const a = $(item).find('a:first')[0];
-            const img = $(item).find('img:first')[0];
-            const content = $(item).find('.video-text:first').text();
-            videos.push({
-                "vod_name": a.attribs.title,
-                "vod_id": a.attribs.href,
-                "vod_remarks": content,
-                "vod_pic": img.attribs['data-src']
+        let {input, pdfa, pdfh, pd} = this;
+        let html = await request(input);
+        let d = [];
+        let data = pdfa(html, '.module-items .module-search-item');
+        data.forEach((it) => {
+            d.push({
+                title: pdfh(it, 'a&&title'),
+                pic_url: pd(it, 'img&&data-src'),
+                desc: pdfh(it, '.video-text&&Text'),
+                url: pd(it, 'a:eq(-1)&&href'),
+                content: pdfh(it, '.video-info-items:eq(-1)&&Text'),
             })
-        })
-        return videos
+        });
+        return setResult(d);
     },
     lazy: async function (flag, id, flags) {
-        let {input} = this;
+        let {input, mediaProxyUrl} = this;
         const ids = input.split('*');
         const urls = [];
         let UCDownloadingCache = {};
@@ -129,7 +131,19 @@ var rule = {
         if (flag.startsWith('Quark-')) {
             console.log("夸克网盘解析开始")
             const down = await Quark.getDownload(ids[0], ids[1], ids[2], ids[3], true);
+            const headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'origin': 'https://pan.quark.cn',
+                'referer': 'https://pan.quark.cn/',
+                'Cookie': Quark.cookie
+            };
             urls.push("原画", down.download_url + '#fastPlayMode##threads=10#')
+            urls.push("原代服", mediaProxyUrl + `?thread=${ENV.get('thread') || 6}&form=urlcode&randUa=1&url=` + encodeURIComponent(down.download_url) + '&header=' + encodeURIComponent(JSON.stringify(headers)))
+            if (ENV.get('play_local_proxy_type', '1') === '2') {
+                urls.push("原代本", `http://127.0.0.1:7777/?thread=${ENV.get('thread') || 6}&form=urlcode&randUa=1&url=` + encodeURIComponent(down.download_url) + '&header=' + encodeURIComponent(JSON.stringify(headers)));
+            } else {
+                urls.push("原代本", `http://127.0.0.1:5575/proxy?thread=${ENV.get('thread') || 6}&chunkSize=256&url=` + encodeURIComponent(down.download_url));
+            }
             const transcoding = (await Quark.getLiveTranscoding(ids[0], ids[1], ids[2], ids[3])).filter((t) => t.accessable);
             transcoding.forEach((t) => {
                 urls.push(t.resolution === 'low' ? "流畅" : t.resolution === 'high' ? "高清" : t.resolution === 'super' ? "超清" : t.resolution, t.video_info.url)
@@ -141,7 +155,7 @@ var rule = {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                     'origin': 'https://pan.quark.cn',
                     'referer': 'https://pan.quark.cn/',
-                    'Cookie': Quark.cookie
+                    'Cookie': headers
                 }
             }
         } else if (flag.startsWith('UC-')) {

@@ -9,6 +9,68 @@ const {
 } = $.require('./_lib.scan.js');
 // 访问测试 http://127.0.0.1:5757/api/设置中心?ac=action&action=set-cookie
 // 访问测试 http://127.0.0.1:5757/api/设置中心?ac=action&action=quarkCookieConfig&value={"cookie":"我是cookie"}
+const AI_Cache = {};
+
+let gitPublicUrl = 'https://github.catvod.com/https://raw.githubusercontent.com/hjdhnx/drpy-node/refs/heads/main/public/';
+let liveImgUrl = urljoin(gitPublicUrl, './images/lives.jpg');
+let quick_data = {
+    腾讯: 'https://v.qq.com/x/cover/mzc00200vkqr54u/u4100l66fas.html',
+    爱奇艺: 'http://www.iqiyi.com/v_1b0tk1b8tl8.html',
+    夸克: 'https://pan.quark.cn/s/6c8158e258f3',
+    UC: 'https://drive.uc.cn/s/59023f57d3ce4?public=1',
+    阿里: 'https://www.alipan.com/s/vgXMcowK8pQ',
+    天翼: 'https://cloud.189.cn/web/share?code=INJbU3NbqyUj',
+    移动1: 'https://yun.139.com/shareweb/#/w/i/0i5CLQ7BpV7Ai',
+    移动2: 'https://caiyun.139.com/m/i?2jexC1gcjeN7q',
+    移动3: 'https://yun.139.com/shareweb/#/w/i/2i2MoE9ZHn9p1',
+    直链1: 'https://vdse.bdstatic.com//628ca08719cef5987ea2ae3c6f0d2386.mp4',
+    嗅探1: 'https://www.6080kk.cc/haokanplay/178120-1-1.html',
+    嗅探2: 'https://www.hahads.com/play/537106-3-1.html',
+    多集: 'https://v.qq.com/x/cover/m441e3rjq9kwpsc/m00253deqqo.html#https://pan.quark.cn/s/6c8158e258f3',
+    海阔二级单线路: gzip(JSON.stringify({
+        "actor": "剧集",
+        "content": "【道长DR】　　围绕上世纪30年代的上海滩，讲述了两位坚韧勇敢的女性在波澜诡谲的民国时代相互救赎、完成蜕变的动人故事。 收起",
+        "director": "qingbenjiaren2024",
+        "from": "线路223",
+        "name": "卿本佳人2024",
+        "pic": "https://pic3.yzzyimages.com/upload/vod/2024-11-21/17321619851.jpg",
+        "url": "第01集$https://b.6080z.com/vodplay/101329-4-1.html#第02集$https://b.6080z.com/vodplay/101329-4-2.html#第03集$https://b.6080z.com/vodplay/101329-4-3.html#第04集$https://b.6080z.com/vodplay/101329-4-4.html#第05集$https://b.6080z.com/vodplay/101329-4-5.html#第06集$https://b.6080z.com/vodplay/101329-4-6.html#第07集$https://b.6080z.com/vodplay/101329-4-7.html#第08集$https://b.6080z.com/vodplay/101329-4-8.html#第09集$https://b.6080z.com/vodplay/101329-4-9.html#第10集$https://b.6080z.com/vodplay/101329-4-10.html#第11集$https://b.6080z.com/vodplay/101329-4-11.html#第12集$https://b.6080z.com/vodplay/101329-4-12.html#第12集$https://b.6080z.com/vodplay/101329-4-13.html#第13集$https://b.6080z.com/vodplay/101329-4-14.html#第14集$https://b.6080z.com/vodplay/101329-4-15.html#第15集$https://b.6080z.com/vodplay/101329-4-16.html#第16集$https://b.6080z.com/vodplay/101329-4-17.html#第17集$https://b.6080z.com/vodplay/101329-4-18.html#第18集$https://b.6080z.com/vodplay/101329-4-19.html#第19集$https://b.6080z.com/vodplay/101329-4-20.html#第20集$https://b.6080z.com/vodplay/101329-4-21.html#第21集$https://b.6080z.com/vodplay/101329-4-22.html#第22集$https://b.6080z.com/vodplay/101329-4-23.html"
+    })),
+};
+let quick_data1 = {
+    '大一实习': 'https://fanqienovel.com/page/7421167583522458648',
+    '十日终焉': 'https://fanqienovel.com/page/7143038691944959011',
+    '斩神': 'https://fanqienovel.com/page/6982529841564224526',
+};
+let quick_data2 = {
+    '推送': 'push',
+    '夸克': 'quark',
+    'UC': 'uc',
+    '阿里': 'ali',
+    '天翼': 'cloud',
+    '哔哩': 'bili',
+    '系统配置': 'system',
+    '测试': 'test',
+};
+
+let selectDataList = [];
+let selectDataList1 = [];
+let selectDataList2 = [];
+
+for (let key of Object.keys(quick_data)) {
+    selectDataList.push(`${key}:=${quick_data[key]}`);
+}
+let selectData = selectDataList.join(',');
+
+for (let key of Object.keys(quick_data1)) {
+    selectDataList1.push(`${key}:=${quick_data1[key]}`);
+}
+let selectData1 = selectDataList1.join(',');
+
+for (let key of Object.keys(quick_data2)) {
+    selectDataList2.push(`${key}:=${quick_data2[key]}`);
+}
+let selectData2 = selectDataList2.join(',');
 
 var rule = {
     类型: '设置',
@@ -17,8 +79,24 @@ var rule = {
         let {publicUrl} = this;
         // log('publicUrl:', publicUrl);
         let setIcon = urljoin(publicUrl, './images/icon_cookie/设置.png');
+        let searchIcon = urljoin(publicUrl, './images/icon_cookie/搜索.jpg');
         let chatIcon = urljoin(publicUrl, './images/icon_cookie/chat.webp');
-        action_data.forEach(it => {
+        const data = deepCopy(action_data);
+        data.push({
+            vod_id: JSON.stringify({
+                actionId: '源内搜索',
+                id: 'wd',
+                type: 'input',
+                title: '源内搜索',
+                tip: '请输入搜索内容',
+                value: '',
+                selectData: selectData2
+            }),
+            vod_name: '源内搜索',
+            vod_pic: searchIcon,
+            vod_tag: 'action',
+        });
+        data.forEach(it => {
             if (!it.vod_pic) {
                 it.vod_pic = setIcon;
             }
@@ -26,7 +104,7 @@ var rule = {
                 it.vod_pic = chatIcon;
             }
         });
-        return action_data;
+        return data;
     },
     // 推荐样式
     hikerListCol: 'icon_round_4',
@@ -38,6 +116,29 @@ var rule = {
     more: {
         sourceTag: '设置,动作',
         actions: [
+            {
+                name: '推送',
+                action: JSON.stringify({
+                    actionId: '推送视频播放',
+                    id: 'push',
+                    type: 'input',
+                    title: '推送视频地址进行播放',
+                    tip: '支持网盘、官链、直链、待嗅探链接',
+                    value: '',
+                    msg: '请输入待推送的视频地址',
+                    imageUrl: liveImgUrl,
+                    imageHeight: 200,
+                    imageType: 'card_pic_3',
+                    keep: true,
+                    button: 4,
+                    width: 640,
+                    // selectData: '腾讯:=https://v.qq.com/x/cover/m441e3rjq9kwpsc/l0045w5hv1k.html,2:=bb输入默认值bbbbb,3:=c输入默认值ddd,4:=输入默认值,5:=111,6:=22222,7:=HOHO,HELLO,world'
+                    selectData: selectData
+                }),
+                vod_name: '推送视频播放',
+                vod_pic: liveImgUrl,
+                vod_tag: 'action'
+            },
             {
                 name: '连续对话', action: JSON.stringify({
                     actionId: '连续对话',
@@ -57,6 +158,7 @@ var rule = {
                     msgType: 'long_text',
                     httpTimeout: 60,
                     canceledOnTouchOutside: false,
+                    selectData: '新的对话:=清空AI对话记录'
                 })
             },
             {name: '查看夸克cookie', action: '查看夸克cookie'},
@@ -81,9 +183,13 @@ var rule = {
     aliScanCheck: null,
     biliScanCheck: null,
     host: 'http://empty',
-    class_name: '推送&夸克&UC&阿里&哔哩&系统配置&测试',
-    class_url: 'push&quark&uc&ali&bili&system&test',
+    class_name: '推送&夸克&UC&阿里&天翼&哔哩&系统配置&测试&接口挂载&视频解析',
+    class_url: 'push&quark&uc&ali&cloud&bili&system&test&apiLink&videoParse',
     url: '/fyclass',
+
+    预处理: async function (env) {
+
+    },
 
     一级: async function (tid, pg, filter, extend) {
         let {input, MY_CATE, MY_PAGE, publicUrl} = this;
@@ -96,6 +202,7 @@ var rule = {
             'uc': urljoin(publicUrl, './images/icon_cookie/UC.png'),
             'ali': urljoin(publicUrl, './images/icon_cookie/阿里.png'),
             'bili': urljoin(publicUrl, './images/icon_cookie/哔哩.png'),
+            'cloud': urljoin(publicUrl, './images/icon_cookie/天翼.png'),
             'adult': urljoin(publicUrl, './images/icon_cookie/chat.webp'),
             'test': urljoin(publicUrl, './icon.svg'),
             'lives': urljoin(publicUrl, './images/lives.jpg'),
@@ -105,43 +212,6 @@ var rule = {
         let d = [];
         switch (MY_CATE) {
             case 'push':
-                let quick_data = {
-                    腾讯: 'https://v.qq.com/x/cover/mzc00200vkqr54u/u4100l66fas.html',
-                    爱奇艺: 'http://www.iqiyi.com/v_1b0tk1b8tl8.html',
-                    夸克: 'https://pan.quark.cn/s/6c8158e258f3',
-                    UC: 'https://drive.uc.cn/s/59023f57d3ce4?public=1',
-                    阿里: 'https://www.alipan.com/s/vgXMcowK8pQ',
-                    直链1: 'https://vdse.bdstatic.com//628ca08719cef5987ea2ae3c6f0d2386.mp4',
-                    嗅探1: 'https://www.6080kk.cc/haokanplay/178120-1-1.html',
-                    嗅探2: 'https://www.hahads.com/play/537106-3-1.html',
-                    多集: 'https://v.qq.com/x/cover/m441e3rjq9kwpsc/m00253deqqo.html#https://pan.quark.cn/s/6c8158e258f3',
-                    海阔二级单线路: gzip(JSON.stringify({
-                        "actor": "剧集",
-                        "content": "【道长DR】　　围绕上世纪30年代的上海滩，讲述了两位坚韧勇敢的女性在波澜诡谲的民国时代相互救赎、完成蜕变的动人故事。 收起",
-                        "director": "qingbenjiaren2024",
-                        "from": "线路223",
-                        "name": "卿本佳人2024",
-                        "pic": "https://pic3.yzzyimages.com/upload/vod/2024-11-21/17321619851.jpg",
-                        "url": "第01集$https://b.6080z.com/vodplay/101329-4-1.html#第02集$https://b.6080z.com/vodplay/101329-4-2.html#第03集$https://b.6080z.com/vodplay/101329-4-3.html#第04集$https://b.6080z.com/vodplay/101329-4-4.html#第05集$https://b.6080z.com/vodplay/101329-4-5.html#第06集$https://b.6080z.com/vodplay/101329-4-6.html#第07集$https://b.6080z.com/vodplay/101329-4-7.html#第08集$https://b.6080z.com/vodplay/101329-4-8.html#第09集$https://b.6080z.com/vodplay/101329-4-9.html#第10集$https://b.6080z.com/vodplay/101329-4-10.html#第11集$https://b.6080z.com/vodplay/101329-4-11.html#第12集$https://b.6080z.com/vodplay/101329-4-12.html#第12集$https://b.6080z.com/vodplay/101329-4-13.html#第13集$https://b.6080z.com/vodplay/101329-4-14.html#第14集$https://b.6080z.com/vodplay/101329-4-15.html#第15集$https://b.6080z.com/vodplay/101329-4-16.html#第16集$https://b.6080z.com/vodplay/101329-4-17.html#第17集$https://b.6080z.com/vodplay/101329-4-18.html#第18集$https://b.6080z.com/vodplay/101329-4-19.html#第19集$https://b.6080z.com/vodplay/101329-4-20.html#第20集$https://b.6080z.com/vodplay/101329-4-21.html#第21集$https://b.6080z.com/vodplay/101329-4-22.html#第22集$https://b.6080z.com/vodplay/101329-4-23.html"
-                    })),
-                };
-                let quick_data1 = {
-                    '大一实习': 'https://fanqienovel.com/page/7421167583522458648',
-                    '十日终焉': 'https://fanqienovel.com/page/7143038691944959011',
-                    '斩神': 'https://fanqienovel.com/page/6982529841564224526',
-                };
-                let selectDataList = [];
-                let selectDataList1 = [];
-                for (let key of Object.keys(quick_data)) {
-                    selectDataList.push(`${key}:=${quick_data[key]}`);
-                }
-                let selectData = selectDataList.join(',');
-                // log(selectData);
-                for (let key of Object.keys(quick_data1)) {
-                    selectDataList1.push(`${key}:=${quick_data1[key]}`);
-                }
-                let selectData1 = selectDataList1.join(',');
-                // log(selectData);
                 d.push({
                     vod_id: JSON.stringify({
                         actionId: '推送视频播放',
@@ -219,6 +289,14 @@ var rule = {
                     vod_tag: 'action'
                 });
                 break;
+            case 'cloud':
+                d.push(genMultiInput('cloud_account', '设置天翼 账号', null, images.cloud));
+                d.push(genMultiInput('cloud_password', '设置天翼 密码', null, images.cloud));
+                // d.push(genMultiInput('cloud_cookie', '设置天翼 cookie', null, images.cloud));
+                d.push(getInput('get_cloud_account', '查看天翼 账号', images.cloud));
+                d.push(getInput('get_cloud_password', '查看天翼 密码', images.cloud));
+                d.push(getInput('get_cloud_cookie', '查看天翼 cookie', images.cloud));
+                break;
             case 'bili':
                 d.push(genMultiInput('bili_cookie', '设置哔哩 cookie', null, images.bili));
                 d.push(getInput('get_bili_cookie', '查看哔哩 cookie', images.bili));
@@ -235,7 +313,14 @@ var rule = {
                 d.push(getInput('get_hide_adult', '查看青少年模式', images.settings));
                 d.push(genMultiInput('thread', '设置播放代理线程数', '默认为1，可自行配置成其他值如:10', images.settings));
                 d.push(getInput('get_thread', '查看播放代理线程数', images.settings));
-                d.push(genMultiInput('now_ai', '设置当前AI', '1: 讯飞星火 2:deepseek 3.讯飞智能体\n如果不填，连续对话默认使用讯飞星火', images.settings));
+                d.push(genMultiInput('play_local_proxy_type', '设置原代本类型', '默认为1，可自行配置成其他值如:2 (1 不夜5575,2 mediaGo 7777 其他:5575)', images.settings));
+                d.push(getInput('get_play_local_proxy_type', '查看原代本类型', images.settings));
+
+                d.push(genMultiInput('play_proxy_mode', '设置播放代理模式', '默认为1，可自行配置成其他值如:2 (1 内存加速,2 磁盘加速 其他:内存加速)', images.settings));
+                d.push(getInput('get_play_proxy_mode', '查看播放代理模式', images.settings));
+                d.push(genMultiInput('enable_dr2', '设置drpy2源启用状态', '设置为1可启用此功能(默认没设置也属于启动，设置其他值关闭)', images.settings));
+                d.push(getInput('get_enable_dr2', '查看drpy2源启用状态', images.settings));
+                d.push(genMultiInput('now_ai', '设置当前AI', '1: 讯飞星火 2:deepseek 3.讯飞智能体 4.Kimi \n如果不填，连续对话默认使用讯飞星火', images.settings));
                 d.push(getInput('get_now_ai', '查看当前AI', images.settings));
                 d.push(genMultiInput('allow_forward', '设置允许代理转发', '设置为1可启用此功能，有一定的使用场景用于突破网络限制', images.settings));
                 d.push(getInput('get_allow_forward', '查看允许代理转发', images.settings));
@@ -245,6 +330,11 @@ var rule = {
                 d.push(getInput('get_deepseek_apiKey', '查看deepseek AI鉴权', images.settings));
                 d.push(genMultiInput('sparkBotObject', '设置讯飞星火智能体 AI鉴权', '设置对象形式，如:{"appId":"6fafca", "uid":"道长", "assistantId":"tke24zrzq3f1"}\n 在这个页面的http鉴权信息:\nhttps://xinghuo.xfyun.cn/botcenter/createbot', images.settings));
                 d.push(getInput('get_sparkBotObject', '查看讯飞星火智能体 AI鉴权', images.settings));
+
+                d.push(genMultiInput('show_curl', '设置打印curl开关', '设置为1可启用此功能(默认关闭)', images.settings));
+                d.push(getInput('get_show_curl', '查看打印curl开关', images.settings));
+                d.push(genMultiInput('show_req', '设置打印req开关', '设置为1可启用此功能(默认关闭)', images.settings));
+                d.push(getInput('get_req', '查看打印req开关', images.settings));
                 break;
             case 'test':
                 d.push({
@@ -254,6 +344,23 @@ var rule = {
                     vod_desc: "流式代理mp4等视频"
                 });
                 break;
+            case 'apiLink':
+                d.push(genMultiInput('link_url', '设置挂载地址', '可以挂载t4配置链接如 hipy-t4、不夜t4', images.settings));
+                d.push(getInput('get_link_url', '查看挂载地址', images.settings));
+                d.push(getInput('link_data', '更新挂载数据', images.settings, '将挂载的配置数据获取到系统内方便武魂融合，远程有更新也需要执行此内容'));
+                d.push(getInput('get_link_data', '查看挂载数据', images.settings));
+                d.push(genMultiInput('enable_link_data', '设置启用挂载数据', '设置为1可以启用。默认不启用。设置其他值禁用', images.settings));
+                d.push(getInput('get_enable_link_data', '查看启用挂载数据', images.settings));
+                d.push(genMultiInput('enable_link_push', '设置启用挂载推送', '设置为1可以启用。默认即关闭。设置其他值禁用', images.settings));
+                d.push(getInput('get_enable_link_push', '查看启用挂载推送', images.settings));
+                d.push(genMultiInput('enable_link_jar', '设置允许挂载Jar', '设置为1可以启用。默认即关闭。设置其他值禁用', images.settings));
+                d.push(getInput('get_enable_link_jar', '查看允许挂载Jar', images.settings));
+
+                break;
+            case 'videoParse':
+                d.push(genMultiInput('mg_hz', '设置芒果解析画质', '默认为4，可自行配置成其他值 (视频质量，9=4K, 4=1080p, 3=720p, 2=560p)', images.settings));
+                d.push(getInput('get_mg_hz', '查看芒果解析画质', images.settings));
+                break;
         }
         return d
     },
@@ -262,10 +369,12 @@ var rule = {
         // log(input, orId);
         if (orId === 'proxyStream') {
             let media_url = 'https://vdse.bdstatic.com//628ca08719cef5987ea2ae3c6f0d2386.mp4';
+            let m3u8_url = 'http://kjsp.aikan.miguvideo.com/PLTV/88888888/224/3221236432/1.m3u8';
             return {
                 vod_id: 'proxyStream',
                 vod_name: '测试代理流',
                 vod_play_from: 'drpyS本地流代理',
+                // vod_play_url: '测试播放流$' + getProxyUrl().replace('?do=js', media_url) + '#不代理直接播$' + media_url + '#8k播放$' + m3u8_url,
                 vod_play_url: '测试播放流$' + getProxyUrl().replace('?do=js', media_url) + '#不代理直接播$' + media_url
             }
         }
@@ -313,6 +422,20 @@ var rule = {
                 return '发生错误：' + e;
             }
         }
+        if (action === '源内搜索') {
+            let content = JSON.parse(value);
+            return JSON.stringify({
+                action: {
+                    actionId: '__self_search__',
+                    skey: '', //目标源key，可选，未设置或为空则使用当前源
+                    // skey: 'drpyS_小米盘搜[盘]', //目标源key，可选，未设置或为空则使用当前源 | 跳一级并非跳搜索
+                    name: '搜索: ' + content.wd,
+                    tid: content.wd,
+                    flag: '0-0-S',
+                    msg: '源内搜索'
+                }
+            });
+        }
 
         if (action === '连续对话') {
             let content = JSON.parse(value);
@@ -343,10 +466,23 @@ var rule = {
                     toast: '你要去看视频了'
                 });
             }
+            if (prompt.startsWith('清空AI对话记录')) {
+                Object.keys(AI_Cache).forEach(key => {
+                    delete AI_Cache[key];
+                });
+                return JSON.stringify({
+                    action: {
+                        actionId: '__keep__',
+                        msg: '准备开始新的对话...',
+                        reset: true
+                    },
+                    toast: '记录已清除，可以开始新的对话了'
+                });
+            }
             let user1 = '你';
             let user2 = 'AI';
             let replyContent = prompt;
-            if (ENV.get('spark_ai_authKey')) {
+            if (['1', '2', '3', '4'].includes(ENV.get('now_ai', '1'))) {
                 if (rule.askLock) {
                     return JSON.stringify({
                         action: {
@@ -360,23 +496,41 @@ var rule = {
                 let AI = null;
                 switch (ENV.get('now_ai', '1')) {
                     case '1':
-                        AI = new AIS.SparkAI({
-                            authKey: ENV.get('spark_ai_authKey'),
-                            baseURL: 'https://spark-api-open.xf-yun.com',
-                        });
+                        if (!AI_Cache['1']) {
+                            AI_Cache['1'] = new AIS.SparkAI({
+                                authKey: ENV.get('spark_ai_authKey'),
+                                baseURL: 'https://spark-api-open.xf-yun.com',
+                            });
+                        }
+                        AI = AI_Cache['1'];
                         user2 = '讯飞星火';
                         break;
                     case '2':
-                        AI = new AIS.DeepSeek({
-                            apiKey: ENV.get('deepseek_apiKey'),
-                        });
+                        if (!AI_Cache['2']) {
+                            AI_Cache['2'] = new AIS.DeepSeek({
+                                apiKey: ENV.get('deepseek_apiKey'),
+                            });
+                        }
+                        AI = AI_Cache['2'];
                         user2 = 'deepSeek';
                         break;
                     case '3':
-                        const sparkBotObject = ENV.get('sparkBotObject', {}, 1);
-                        // log('sparkBotObject:', sparkBotObject);
-                        AI = new AIS.SparkAIBot(sparkBotObject.appId, sparkBotObject.uid, sparkBotObject.assistantId);
+                        if (!AI_Cache['3']) {
+                            const sparkBotObject = ENV.get('sparkBotObject', {}, 1);
+                            log('sparkBotObject:', sparkBotObject);
+                            AI_Cache['3'] = new AIS.SparkAIBot(sparkBotObject.appId, sparkBotObject.uid, sparkBotObject.assistantId);
+                        }
+                        AI = AI_Cache['3'];
                         user2 = '讯飞智能体';
+                        break;
+                    case '4':
+                        if (!AI_Cache['4']) {
+                            AI_Cache['4'] = new AIS.Kimi({
+                                apiKey: ENV.get('kimi_apiKey'),
+                            });
+                        }
+                        AI = AI_Cache['4'];
+                        user2 = 'Kimi';
                         break;
                 }
                 if (!AI) {
@@ -384,7 +538,7 @@ var rule = {
                 }
                 rule.askLock = 1;
                 try {
-                    replyContent = await AI.ask(prompt, {temperature: 1.0});
+                    replyContent = await AI.ask('道长', prompt, {temperature: 1.0});
                 } catch (error) {
                     replyContent = error.message;
                 }
@@ -665,7 +819,7 @@ var rule = {
                         qrcode.platformStates[QRCodeHandler.PLATFORM_ALI] = null;
                         return '扫描完成，已成功获取cookie并入库';
                     } else if (scanResult.status === 'EXPIRED') {
-                        log('已过期')
+                        log('已过期');
                         break;
                     } else {
                         await sleep(1000);
@@ -804,7 +958,8 @@ var rule = {
                     action: {
                         actionId: '__detail__',
                         skey: 'push_agent',
-                        ids: encodeURIComponent(obj.push),
+                        // ids: encodeURIComponent(obj.push),
+                        ids: obj.push,
                     },
                     toast: `开始解析视频:${obj.push}`
                 });
@@ -831,27 +986,53 @@ var rule = {
             'quark_cookie',
             'uc_cookie',
             'ali_token',
+            'cloud_account',
+            'cloud_password',
+            'cloud_cookie',
             'bili_cookie',
             'hide_adult',
             'thread',
+            'play_local_proxy_type',
+            'play_proxy_mode',
+            'enable_dr2',
             'spark_ai_authKey',
             'deepseek_apiKey',
             'sparkBotObject',
             'now_ai',
             'allow_forward',
+            'show_curl',
+            'show_req',
+            'link_url',
+            'enable_link_data',
+            'enable_link_push',
+            'enable_link_jar',
+            'mg_hz',
         ];
         let get_cookie_sets = [
             'get_quark_cookie',
             'get_uc_cookie',
             'get_ali_token',
+            'get_cloud_account',
+            'get_cloud_password',
+            'get_cloud_cookie',
             'get_bili_cookie',
             'get_hide_adult',
             'get_thread',
+            'play_local_proxy_type',
+            'get_play_proxy_mode',
+            'get_enable_dr2',
             'get_spark_ai_authKey',
             'get_deepseek_apiKey',
             'get_sparkBotObject',
             'get_now_ai',
             'get_allow_forward',
+            'get_show_curl',
+            'get_show_req',
+            'get_link_url',
+            'get_enable_link_data',
+            'get_enable_link_push',
+            'get_enable_link_jar',
+            'get_mg_hz',
         ];
         if (cookie_sets.includes(action) && value) {
             try {
@@ -908,6 +1089,62 @@ var rule = {
                 return '发生错误：' + e.message;
             }
         }
+        if (action === 'link_data' && value) {
+            try {
+                const obj = JSON.parse(value);
+                const auth_code = obj.auth_code;
+                if (!auth_code) {
+                    return '入库授权码不允许为空!'
+                }
+                const COOKIE_AUTH_CODE = _ENV.COOKIE_AUTH_CODE || 'drpys';
+                if (auth_code !== COOKIE_AUTH_CODE) {
+                    return `您输入的入库授权码【${auth_code}】不正确`
+                }
+                const link_url = ENV.get('link_url');
+                let data = await request(link_url);
+                pathLib.writeFile('./settings/link_data.json', data);
+                return '挂载数据已更新，请前往查看确保无问题';
+            } catch (e) {
+                return '发生错误：' + e.message;
+            }
+        }
+        if (action === 'get_link_data' && value) {
+            try {
+                const obj = JSON.parse(value);
+                const auth_code = obj.auth_code;
+                if (!auth_code) {
+                    return '入库授权码不允许为空!'
+                }
+                const COOKIE_AUTH_CODE = _ENV.COOKIE_AUTH_CODE || 'drpys';
+                if (auth_code !== COOKIE_AUTH_CODE) {
+                    return `您输入的入库授权码【${auth_code}】不正确`
+                }
+                let data = pathLib.readFile('./settings/link_data.json');
+                let sites = [];
+                try {
+                    sites = JSON.parse(data).sites.filter(site => site.type = 4);
+                } catch (e) {
+                }
+                sites = JSON.stringify(sites);
+                // log(sites);
+                return JSON.stringify({
+                    action: {
+                        actionId: action + '_value',
+                        id: 'link_data',
+                        type: 'input',
+                        title: '已挂载的数据',
+                        tip: `你想查看的挂载数据`,
+                        value: 'link_data.json',
+                        width: 680,
+                        height: 800,
+                        msgType: 'long_text',
+                        msg: sites
+                    }
+                });
+            } catch (e) {
+                return '发生错误：' + e.message;
+            }
+        }
         if (action === '查看夸克cookie') {
             return {action: getInput('get_quark_cookie', '查看夸克 cookie', urljoin(publicUrl, './images/icon_cookie/夸克.webp')).vod_id};
         }
@@ -950,7 +1187,7 @@ function genMultiInput(actionId, title, desc, img) {
     }
 }
 
-function getInput(actionId, title, img) {
+function getInput(actionId, title, img, desc) {
     return {
         vod_id: JSON.stringify({
             actionId: actionId,
@@ -959,7 +1196,7 @@ function getInput(actionId, title, img) {
             title: '入库授权码',
             tip: '请输入.env中配置的入库授权码',
             value: '',
-            msg: '查看已设置的cookie需要授权码',
+            msg: desc || '查看已设置的cookie需要授权码',
             // imageUrl: img || 'https://pic.imgdb.cn/item/667ce9f4d9c307b7e9f9d052.webp',
             imageUrl: img || 'https://pic.qisuidc.cn/s/2024/10/23/6718c212f1fdd.webp',
             imageHeight: 200,

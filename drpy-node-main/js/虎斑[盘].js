@@ -4,7 +4,8 @@ const {
 } = misc;
 var rule = {
     title: '虎斑[盘]',
-    host: 'https://wp.huban.xyz',
+    // host: 'https://wp.huban.xyz',
+    host: 'http://45.207.212.215:12121',
     url: '/index.php/vod/show/id/fyfilter.html',
     filter_url: '{{fl.cateId}}{{fl.area}}{{fl.by}}{{fl.class}}{{fl.lang}}{{fl.letter}}/page/fypage{{fl.year}}',
     searchUrl: '/index.php/vod/search/page/fypage/wd/**.html',
@@ -20,6 +21,9 @@ var rule = {
     cate_exclude: '网址|专题|全部影片',
     tab_rename: {'KUAKE1': '夸克1', 'KUAKE11': '夸克2', 'YOUSEE1': 'UC1', 'YOUSEE11': 'UC2',},
     play_parse: true,
+    searchable: 1,
+    filterable: 1,
+    quickSearch: 0,
     class_name: '电影&剧集&动漫&综艺&短剧&4K',
     class_url: '1&2&4&3&6&5',
     class_parse: async () => {
@@ -62,10 +66,12 @@ var rule = {
         }
         let playform = []
         let playurls = []
+        let playPans = [];
         for (const item of $('.module-row-title')) {
             const a = $(item).find('p:first')[0];
             let link = a.children[0].data.trim()
             if (/pan.quark.cn/.test(link)) {
+                playPans.push(link);
                 const shareData = Quark.getShareData(link);
                 if (shareData) {
                     const videos = await Quark.getFilesByShareUrl(shareData);
@@ -81,6 +87,7 @@ var rule = {
                     }
                 }
             } else if (/drive.uc.cn/.test(link)) {
+                playPans.push(link);
                 const shareData = UC.getShareData(link);
                 if (shareData) {
                     const videos = await UC.getFilesByShareUrl(shareData);
@@ -99,25 +106,26 @@ var rule = {
         }
         vod.vod_play_from = playform.join("$$$")
         vod.vod_play_url = playurls.join("$$$")
+        vod.vod_play_pan = playPans.join("$$$")
         return vod
     },
     搜索: async function (wd, quick, pg) {
-        let {input} = this
-        let html = (await getHtml(input)).data
-        const $ = pq(html)
-        let videos = []
-        $('.module-items .module-search-item').each((index, item) => {
-            const a = $(item).find('a:first')[0];
-            const img = $(item).find('img:first')[0];
-            const content = $(item).find('.module-item-text:first').text();
-            videos.push({
-                "vod_name": a.attribs.title,
-                "vod_id": a.attribs.href,
-                "vod_remarks": content,
-                "vod_pic": img.attribs['data-src']
+        let {input, pdfa, pdfh, pd} = this;
+        let html = await request(input);
+        let d = [];
+        let data = pdfa(html, '.module-items .module-search-item');
+        data.forEach((it) => {
+            d.push({
+                title: pdfh(it, 'a&&title'),
+                pic_url: pd(it, 'img&&data-src'),
+                desc: pdfh(it, '.video-text&&Text'),
+                url: pd(it, 'a:eq(-1)&&href'),
+                content: pdfh(it, '.video-info-items:eq(-1)&&Text'),
             })
-        })
-        return videos
+        });
+        return setResult(d);
+
+
     },
     lazy: async function (flag, id, flags) {
         let {input, mediaProxyUrl} = this;
@@ -135,9 +143,12 @@ var rule = {
                 'Cookie': Quark.cookie
             };
             urls.push("原画", down.download_url + '#fastPlayMode##threads=10#')
-            // http://ip:port/?thread=线程数&form=url与header编码格式&url=链接&header=所需header
-            urls.push("原代服", mediaProxyUrl + '?thread=6&form=urlcode&randUa=1&url=' + encodeURIComponent(down.download_url) + '&header=' + encodeURIComponent(JSON.stringify(headers)))
-            urls.push("原代本", 'http://127.0.0.1:7777/?thread=6&form=urlcode&randUa=1&url=' + encodeURIComponent(down.download_url) + '&header=' + encodeURIComponent(JSON.stringify(headers)))
+            urls.push("原代服", mediaProxyUrl + `?thread=${ENV.get('thread') || 6}&form=urlcode&randUa=1&url=` + encodeURIComponent(down.download_url) + '&header=' + encodeURIComponent(JSON.stringify(headers)))
+            if (ENV.get('play_local_proxy_type', '1') === '2') {
+                urls.push("原代本", `http://127.0.0.1:7777/?thread=${ENV.get('thread') || 6}&form=urlcode&randUa=1&url=` + encodeURIComponent(down.download_url) + '&header=' + encodeURIComponent(JSON.stringify(headers)));
+            } else {
+                urls.push("原代本", `http://127.0.0.1:5575/proxy?thread=${ENV.get('thread') || 6}&chunkSize=256&url=` + encodeURIComponent(down.download_url));
+            }
             const transcoding = (await Quark.getLiveTranscoding(ids[0], ids[1], ids[2], ids[3])).filter((t) => t.accessable);
             transcoding.forEach((t) => {
                 urls.push(t.resolution === 'low' ? "流畅" : t.resolution === 'high' ? "高清" : t.resolution === 'super' ? "超清" : t.resolution, t.video_info.url)

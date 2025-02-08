@@ -9,7 +9,7 @@ function showToast(message, type = 'success') {
         toastContentEle.textContent = message;
         toast.className = `alert alert-${type}`;
         toast.style = 'display: block;'
-        
+
         setTimeout(() => {
             toast.style = 'display: none;';
             toastContentEle.textContent = '';
@@ -55,6 +55,7 @@ async function initializePage() {
 // 扫码
 let pollInterval;
 let timeoutTimer;
+
 async function scanCode(platform) {
     if (pollInterval) clearInterval(pollInterval);
     if (timeoutTimer) clearTimeout(timeoutTimer);
@@ -65,15 +66,15 @@ async function scanCode(platform) {
     try {
         // 获取二维码
         const qrData = await qrcode_handler.startScan(platform);
-        
+
         // 显示二维码
         img.src = qrData.qrcode;
-        
+
         // 开始轮询扫码结果
         pollInterval = setInterval(async () => {
             try {
                 const statusData = await qrcode_handler.checkStatus(platform);
-                switch(statusData.status) {
+                switch (statusData.status) {
                     case 'CONFIRMED':
                         clearInterval(pollInterval);
                         clearTimeout(timeoutTimer);
@@ -82,21 +83,21 @@ async function scanCode(platform) {
                         input.value = statusData.token || statusData.cookie;
                         showToast('扫码成功！');
                         break;
-                        
+
                     case 'CANCELED':
                         clearInterval(pollInterval);
                         clearTimeout(timeoutTimer);
                         img.src = qrcode_expired;
                         showToast('已取消登录', 'error');
                         break;
-                        
+
                     case 'EXPIRED':
                         clearInterval(pollInterval);
                         clearTimeout(timeoutTimer);
                         img.src = qrcode_expired;
                         showToast('二维码已过期，请重试', 'error');
                         break;
-                        
+
                     case 'SCANED':
                         showToast('已扫码，请在手机上确认');
                         break;
@@ -107,14 +108,14 @@ async function scanCode(platform) {
                 showToast('检查状态失败', 'error');
             }
         }, 2000);
-        
+
         // 30秒后超时
         timeoutTimer = setTimeout(() => {
             clearInterval(pollInterval);
             img.src = qrcode_expired;
             showToast('二维码已过期', 'error');
         }, 30000);
-        
+
     } catch (error) {
         console.log(error)
         if (pollInterval) clearInterval(pollInterval);

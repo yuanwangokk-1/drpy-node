@@ -6,7 +6,7 @@ var rule = {
     类型: '影视',
     title: '瓜子H5',
     desc: '瓜子H5纯js版本',
-    homeUrl:'https://api.zaqohu.com/H5',
+    homeUrl: 'https://api.zaqohu.com/H5',
     url: '/api.php/getappapi.index/typeFilterVodList',
     searchUrl: '/api.php/getappapi.index/searchList',
     searchable: 2,
@@ -42,7 +42,7 @@ var rule = {
         }];
         let filters = {}
         for (const it of classes) {
-            const params = encrypt(JSON.stringify({'pid':parseInt(it.type_id)}))
+            const params = encrypt(JSON.stringify({'pid': parseInt(it.type_id)}))
             let data = JSON.stringify({
                 "params": params
             });
@@ -54,19 +54,19 @@ var rule = {
                 },
                 data: data
             };
-            const html = JSON.parse((await req('https://api.zaqohu.com/H5/Index/CategoryList',config)).content)
+            const html = JSON.parse((await req('https://api.zaqohu.com/H5/Index/CategoryList', config)).content)
             const list = JSON.parse(decrypt(html.data)).list
             let values = []
-            list.forEach((val)=>{
+            list.forEach((val) => {
                 values.push({
-                    'n':val.type.trim(),
-                    'v':val.show_id===undefined?'':val.show_id
+                    'n': val.type.trim(),
+                    'v': val.show_id === undefined ? '' : val.show_id
                 })
             })
             filters[it.type_id] = [{
-                "key":"class",
-                "name":"class",
-                "value":values
+                "key": "class",
+                "name": "class",
+                "value": values
             }]
         }
         return {
@@ -85,40 +85,45 @@ var rule = {
         let html = ''
         let list = ''
         let videos = []
-        if(extend.class===''||extend.class===undefined){
+        if (extend.class === '' || extend.class === undefined) {
             const params = encrypt(JSON.stringify({"pid": Number(tid), "pageSize": 24, "page": pg}))
-            const data =JSON.stringify({
+            const data = JSON.stringify({
                 "params": params
             });
             html = JSON.parse((await req(`${rule.homeUrl}/Category/GetChoiceList`, {
-                method:'post',
+                method: 'post',
                 headers: rule.headers,
-                data:data
+                data: data
             })).content);
             list = JSON.parse(decrypt(html.data)).list
-            list.forEach((it)=>{
+            list.forEach((it) => {
                 videos.push({
                     vod_id: it.vod_id,
-                    vod_name:it.c_name,
-                    vod_pic:it.c_pic
+                    vod_name: it.c_name,
+                    vod_pic: it.c_pic
                 })
             })
-        }else {
-            const params = encrypt(JSON.stringify({ show_id: extend.class, show_pid: Number(tid), pageSize: 24, page: pg }))
-            const data =JSON.stringify({
+        } else {
+            const params = encrypt(JSON.stringify({
+                show_id: extend.class,
+                show_pid: Number(tid),
+                pageSize: 24,
+                page: pg
+            }))
+            const data = JSON.stringify({
                 "params": params
             })
             html = JSON.parse((await req(`${rule.homeUrl}/Category/GetModuleList`, {
-                method:'post',
+                method: 'post',
                 headers: rule.headers,
-                data:data,
+                data: data,
             })).content);
             list = JSON.parse(decrypt(html.data)).list
-            list.forEach((it)=>{
+            list.forEach((it) => {
                 videos.push({
                     vod_id: it.vod_id,
-                    vod_name:it.vod_name,
-                    vod_pic:it.vod_pic
+                    vod_name: it.vod_name,
+                    vod_pic: it.vod_pic
                 })
             })
         }
@@ -127,20 +132,21 @@ var rule = {
     二级: async function (ids) {
         let {input} = this;
         log(input)
-        const vod_id = {"vod_id":ids[0],"pageSize":"10000","page":"1"}
+        const vod_id = {"vod_id": ids[0], "pageSize": "10000", "page": "1"}
         const params = encrypt(JSON.stringify(vod_id))
         const data = JSON.stringify({
-            "params":params
+            "params": params
         })
         const html = JSON.parse((await req(`${rule.homeUrl}/Resource/GetOnePlayList`, {
-            headers:rule.headers,
-            method:'post',
-            body:data
-        })).content);;
+            headers: rule.headers,
+            method: 'post',
+            body: data
+        })).content);
+        ;
         const list = JSON.parse(decrypt(html.data)).urls
         const urls = []
-        list.forEach((it)=>{
-            urls.push(it.name+"$"+it.url)
+        list.forEach((it) => {
+            urls.push(it.name + "$" + it.url)
         })
         let vod = {
             vod_id: ids[0],
@@ -154,13 +160,13 @@ var rule = {
         return vod
     },
     搜索: async function (wd, quick, pg) {
-        
+
     },
     lazy: async function (flag, id, flags) {
-        let {getProxyUrl,input} = this;
-        return {parse:0,url:id}
+        let {getProxyUrl, input} = this;
+        return {parse: 0, url: id}
     },
-    proxy_rule:async function(params){
+    proxy_rule: async function (params) {
         let {input} = this;
     }
 };

@@ -1,6 +1,7 @@
 import axios, {toFormData} from 'axios';
 import axiosX from './axios.min.js';
 import crypto from 'crypto';
+import http from "http";
 import https from 'https';
 import fs from 'node:fs';
 import qs from 'qs';
@@ -8,8 +9,11 @@ import _ from './underscore-esm.min.js'
 // import _ from './underscore-esm.js'
 // import _ from 'underscore'
 import tunnel from "tunnel";
+import iconv from 'iconv-lite';
 import {jsonpath, jsoup} from './htmlParser.js';
 import hlsParser from './hls-parser.js'
+import {keysToLowerCase} from '../utils/utils.js'
+import {ENV} from '../utils/env.js';
 
 // import {batchFetch1, batchFetch2, batchFetch3} from './drpyBatchFetch.js';
 import {batchFetch3} from './hikerBatchFetch.js';
@@ -19,6 +23,56 @@ globalThis.axios = axios;
 globalThis.axiosX = axiosX;
 globalThis.hlsParser = hlsParser;
 globalThis.qs = qs;
+
+const AgentOption = {keepAlive: true, maxSockets: 64, timeout: 30000}; // 最大连接数64,30秒定期清理空闲连接
+const httpAgent = new http.Agent(AgentOption);
+let httpsAgent = new https.Agent({rejectUnauthorized: false, ...AgentOption});
+
+// 配置 axios 使用代理
+const _axios = axios.create({
+    httpAgent,  // 用于 HTTP 请求的代理
+    httpsAgent, // 用于 HTTPS 请求的代理
+});
+
+// 请求拦截器
+_axios.interceptors.request.use((config) => {
+    // 生成 curl 命令
+    const curlCommand = generateCurlCommand(config);
+    if (ENV.get('show_curl', '0') === '1') {
+        console.log(`Generated cURL command:\n${curlCommand}`);
+    }
+    return config;
+}, (error) => {
+    return Promise.reject(error);
+});
+
+/**
+ * 生成 curl 命令
+ * @param {Object} config Axios 请求配置
+ * @returns {string} curl 命令
+ */
+function generateCurlCommand(config) {
+    const {method, url, headers, data} = config;
+    let curlCommand = `curl -X ${method.toUpperCase()} '${url}'`;
+
+    // 添加 headers
+    if (headers) {
+        for (const [key, value] of Object.entries(headers)) {
+            curlCommand += ` -H '${key}: ${value}'`;
+        }
+    }
+
+    // 添加 body 数据
+    if (data) {
+        if (typeof data === 'object') {
+            curlCommand += ` -d '${JSON.stringify(data)}'`;
+        } else {
+            curlCommand += ` -d '${data}'`;
+        }
+    }
+
+    return curlCommand;
+}
 
 
 const confs = {};
@@ -58,103 +112,132 @@ function localDelete(storage, key) {
 }
 
 async function request(url, opt = {}) {
+    // console.log('进入了req...');
+    // 解构参数并设置默认值
+    const {
+        data: _data = null,
+        body = '',
+        postType = null,
+        buffer: returnBuffer = 0,
+        timeout = 5000,
+        redirect = 1,
+        encoding: userEncoding = '',
+        headers: userHeaders = {},
+        method = 'get',
+        proxy = false,
+        stream = null,
+    } = opt;
+
+    let data = body || _data;
+    let encoding = userEncoding;
+
+    // 设置默认 Content-Type
+    const headers = keysToLowerCase({
+        ...userHeaders,
+        ...(postType === 'form' && {'Content-Type': 'application/x-www-form-urlencoded'}),
+        ...(postType === 'form-data' && {'Content-Type': 'multipart/form-data'}),
+    });
+
+    // 添加accept属性防止获取网页源码编码不正确问题
+    if (!Object.keys(headers).includes('accept')) {
+        headers['accept'] = '*/*';
+    }
+
+    // 尝试从 Content-Type 中提取编码
+    if (headers['content-type'] && /charset=(.*)/i.test(headers['content-type'])) {
+        encoding = headers['content-type'].match(/charset=(.*)/i)[1];
+    }
+
+    // 根据 postType 处理数据
+    if (postType === 'form' && data != null) {
+        data = qs.stringify(data, {encode: false});
+    } else if (postType === 'form-data') {
+        data = toFormData(data);
+    }
+
+    // 配置代理或 HTTPS Agent
+    // httpsAgent = new https.Agent({rejectUnauthorized: false});
+    const agent = proxy ? tunnel.httpsOverHttp({proxy: {host: '127.0.0.1', port: 7890}}) : httpsAgent;
+
+    // 设置响应类型为 arraybuffer，确保能正确处理编码
+    const respType = returnBuffer ? 'arraybuffer' : 'arraybuffer';
+
+    if (ENV.get('show_req', '0') === '1') {
+        console.log(`req: ${url} headers: ${JSON.stringify(headers)} data: ${JSON.stringify(data)}`);
+    }
     try {
-        let _data = opt ? opt.data || null : null;
-        let body = opt ? opt.body || '' : '';
-        var postType = opt ? opt.postType || null : null;
-        var returnBuffer = opt ? opt.buffer || 0 : 0;
-        var timeout = opt ? opt.timeout || 5000 : 5000;
-        var redirect = (opt ? opt.redirect || 1 : 1) == 1;
-        _data = body || _data;
-        var headers = opt ? opt.headers || {} : {};
-        if (postType === 'form') {
-            headers['Content-Type'] = 'application/x-www-form-urlencoded';
-
-            if (_data != null) {
-                _data = qs.stringify(data, {encode: false});
-            }
-        } else if (postType === 'form-data') {
-            headers['Content-Type'] = 'multipart/form-data';
-            _data = toFormData(data);
-        }
-        let respType = returnBuffer === 1 || returnBuffer === 2 ? 'arraybuffer' : undefined;
-        // const agent = tunnel.httpsOverHttp({
-        //     proxy: {
-        //         host: '127.0.0.1', port: 7890,
-        //     }
-        // });
-        let agent;
-        if (opt.proxy) {
-            agent = tunnel.httpsOverHttp({
-                proxy: {
-                    host: '127.0.0.1', port: 7890,
-                }
-            });
-        } else {
-            agent = https.Agent({rejectUnauthorized: false,})
-        }
-        let _url = typeof url === "object" ? url.url : url;
-        console.log(`req:${_url} headers:${JSON.stringify(headers)} data:${JSON.stringify(_data)}`);
-        const _axios = axios.create({
-            httpsAgent: agent
-        });
-        var resp = await _axios(url, {
+        // 发送请求
+        const resp = await _axios({
+            url: typeof url === 'object' ? url.url : url,
+            method,
+            headers,
+            data,
+            timeout,
             responseType: respType,
-            method: opt ? opt.method || 'get' : 'get',
-            headers: headers,
-            data: _data,
-            timeout: timeout,
-            maxRedirects: !redirect ? 0 : null,
-            // httpsAgent: agent
+            maxRedirects: redirect ? undefined : 0,
+            httpsAgent: agent,
         });
-        let data = resp.data;
-        var resHeader = {};
-        for (const hks of resp.headers) {
-            var v = hks[1];
-            resHeader[hks[0]] = Array.isArray(v) ? (v.length == 1 ? v[0] : v) : v;
-        }
 
+        let responseData = resp.data;
+
+        // 构建响应头
+        const resHeader = Object.fromEntries(
+            Object.entries(resp.headers).map(([key, value]) => [key, Array.isArray(value) ? (value.length === 1 ? value[0] : value) : value])
+        );
+
+        // 解码逻辑
         if (!returnBuffer) {
-            if (typeof data === 'object') {
-                data = JSON.stringify(data);
-            }
-        } else if (returnBuffer == 1) {
-            return {code: resp.status, headers: resHeader, content: data};
-        } else if (returnBuffer == 2) {
-            return {code: resp.status, headers: resHeader, content: Buffer.from(data).toString('base64')};
-        } else if (returnBuffer == 3) {
-            var stream = opt.stream;
-            if (stream['onResp']) await stream['onResp']({code: resp.status, headers: resHeader});
-            if (stream['onData']) {
-                data.on('data', async (data) => {
-                    await stream['onData'](data);
-                });
-                data.on('end', async () => {
-                    if (stream['onDone']) await stream['onDone']();
-                });
+            const buffer = Buffer.from(responseData);
+
+            if (encoding && encoding.toLowerCase() !== 'utf-8') {
+                // console.log('Detected encoding:', encoding);
+                responseData = iconv.decode(buffer, encoding);
             } else {
-                if (stream['onDone']) await stream['onDone']();
+                responseData = buffer.toString('utf-8');
+            }
+        } else if (returnBuffer === 1) {
+            return {code: resp.status, headers: resHeader, content: responseData};
+        } else if (returnBuffer === 2) {
+            return {code: resp.status, headers: resHeader, content: Buffer.from(responseData).toString('base64')};
+        } else if (returnBuffer === 3 && stream) {
+            if (stream.onResp) await stream.onResp({code: resp.status, headers: resHeader});
+            if (stream.onData) {
+                responseData.on('data', async (chunk) => {
+                    await stream.onData(chunk);
+                });
+                responseData.on('end', async () => {
+                    if (stream.onDone) await stream.onDone();
+                });
+            } else if (stream.onDone) {
+                await stream.onDone();
             }
             return 'stream...';
         }
-        // console.log('返回的data:', data);
-        return {code: resp.status, headers: resHeader, content: data};
+        return {code: resp.status, headers: resHeader, content: responseData};
     } catch (error) {
-        resp = error.response
-        console.log(`req error: ${error.message}`);
+        const {response: resp} = error;
+        console.error(`Request error: ${error.message}`);
+        let responseData = '';
+        // console.log('responseData:',responseData);
         try {
-            return {
-                code: resp.status,
-                headers: resp.headers,
-                content: typeof resp.data === "object" ? JSON.stringify(resp.data) : resp.data
-            };
-        } catch (err) {
-            return {headers: {}, content: ''};
+            const buffer = Buffer.from(resp.data);
+            if (encoding && encoding.toLowerCase() !== 'utf-8') {
+                // console.log('Detected encoding:', encoding);
+                responseData = iconv.decode(buffer, encoding);
+            } else {
+                responseData = buffer.toString('utf-8');
+            }
+        } catch (e) {
+            console.error(`get error response Text failed: ${e.message}`);
         }
+        // console.log('responseData:',responseData);
+        return {
+            code: resp?.status || 500,
+            headers: resp?.headers || {},
+            content: responseData || '',
+        };
     }
-    return {headers: {}, content: ''};
 }
-
 
 function base64EncodeBuf(buff, urlsafe = false) {
     return buff.toString(urlsafe ? 'base64url' : 'base64');
@@ -176,6 +259,7 @@ function responseBase64(data) {
     const buffer = Buffer.from(data, 'binary');
     return buffer.toString('base64');
 }
+
 
 function md5(text) {
     return crypto.createHash('md5').update(Buffer.from(text, 'utf8')).digest('hex');
@@ -606,5 +690,6 @@ function cookieToJson(cookieString) {
 
 globalThis.jsonToCookie = jsonToCookie;
 globalThis.cookieToJson = cookieToJson;
+globalThis.keysToLowerCase = keysToLowerCase;
 
 export default {};

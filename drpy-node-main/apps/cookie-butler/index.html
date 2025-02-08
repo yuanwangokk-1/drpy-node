@@ -2,10 +2,10 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Cookie管理</title>
-    <link rel="stylesheet" href="./static/css/style.css"/>
-    <link rel="stylesheet" href="./static/css/daisyui.min.css"/>
+    <link href="./static/css/style.css" rel="stylesheet"/>
+    <link href="./static/css/daisyui.min.css" rel="stylesheet"/>
     <script src="./static/js/tailwindcss.min.js"></script>
     <script src="./static/js/axios.min.js"></script>
     <script src="./static/js/qrcode.min.js"></script>
@@ -24,7 +24,7 @@
 
     <!-- QR Code -->
     <div class="qrcode-container text-center mb-4">
-        <img id="qrcode" src="./static/img/qrcode_expired.jpg" alt="二维码" class="mx-auto"/>
+        <img alt="二维码" class="mx-auto" id="qrcode" src="./static/img/qrcode_expired.jpg"/>
     </div>
 
     <!-- Divider -->
@@ -32,23 +32,23 @@
 
     <!-- Textarea with improved styling -->
     <textarea
-            id="cookie-res"
             class="textarea textarea-bordered w-full h-40 p-4 bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            id="cookie-res"
             placeholder="扫码确认后将在此处展示cookie"
     ></textarea>
 
     <!-- Buttons with improved design -->
     <div class="flex justify-center gap-4 mt-4">
         <button
-                id="copy-btn"
                 class="btn btn-primary w-28 py-2 rounded-lg text-white shadow-lg transform transition-all duration-200 hover:bg-blue-600 hover:scale-105"
+                id="copy-btn"
                 onclick="copyToClipboard()"
         >
             复制
         </button>
         <button
-                id="store-btn"
                 class="btn btn-success w-28 py-2 rounded-lg text-white shadow-lg transform transition-all duration-200 hover:bg-green-600 hover:scale-105"
+                id="store-btn"
                 onclick="storeCookie()"
         >
             入库

@@ -1,4 +1,5 @@
 ### 代码格式化压缩成一行教程
+
 ```text
 npm install uglify-js -g
 uglifyjs xx.js -o xx.min.js
@@ -11,7 +12,9 @@ $FileDir$
 ```
 
 ### 模板规则说明
+
 所有相关属性说明
+
 ```javascript
 var rule = {
     类型:'影视',//影视|听书|漫画|小说
@@ -128,7 +131,9 @@ var rule = {
     `,
 }
 ```
+
 模板继承写法
+
 ```javascript
 var rule = Object.assign(muban.mxpro,{
 title:'鸭奈飞',
@@ -137,7 +142,9 @@ url:'/index.php/vod/show/id/fyclass/page/fypage.html',
 class_parse:`.navbar-items li:gt(1):lt(6);a&&Text;a&&href;.*/(.*?).html`,
 });
 ```
+
 模板继承写法(新)
+
 ```javascript
 var rule = {
 title:'cokemv',
@@ -146,10 +153,13 @@ host:'https://cokemv.me',
 class_parse:`.navbar-items li:gt(1):lt(7);a&&Text;a&&href;/(\\d+).html`,
 }
 ```
+
 模板继承写法(自动匹配)
+
 ```text
 注意事项:自动匹配只支持能从HOST获取分类的cms模板站,采集1，短视2等api的模板无法匹配
 ```
+
 ```javascript
 var rule = {
     模板: '自动',
@@ -167,7 +177,8 @@ var rule = {
 }
 ```
 
-源正则写法说明  
+源正则写法说明
+
 ```text
 属性class_parse按;分隔后取[3]为分类的正则字符串。  
 这里的正则跟js的/.*/这种写法相比，由于是字符串,需要实现字符串标准。
@@ -188,12 +199,13 @@ proxy_rule参数input赋值格式为三元素列表[status,content-type,data]
 如: [200,'text/plain','hello drpy']  
 input = [200,'application/vnd.apple.mpegurl',m3u8]    
 rsa加解密说明:
+
 ```js
 RSA.encode(data, key, option);
 RSA.decode(data, key, option);
 ```
 
-### 其它类型源说明  
+### 其它类型源说明
 
 默认drpy源都是为早期的tvbox而生的,因此只支持影视类型的源(听书也当影视用)。  
 现在已三端支持,拥抱海阔视界和zyplayer生态。  
@@ -201,4 +213,5 @@ RSA.decode(data, key, option);
 实验特性:支持 类型:'影视',//影视|听书|漫画|小说  
 影视和听书用法一致不需要调整。
 漫画需要在选集播放lazy处理后的url里返回 pics:// 协议，用法同海阔。参考源【第一韩漫】  
-小说需要在选集播放lazy处理后的url里返回 novel:// 协议，内容为json文本。如 novel://{"title":"章节名称","content":"章节内容"}
+小说需要在选集播放lazy处理后的url里返回 novel:// 协议，内容为json文本。如 novel://{"title":"章节名称","content":"
+章节内容"}

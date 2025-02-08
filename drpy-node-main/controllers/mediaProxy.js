@@ -1,5 +1,8 @@
-import {base64Decode} from '../libs_drpy/crypto-util.js';
+import {base64Decode, md5} from '../libs_drpy/crypto-util.js';
 import '../utils/random-http-ua.js'
+import {keysToLowerCase} from '../utils/utils.js';
+import {ENV} from "../utils/env.js";
+import chunkStream from '../utils/chunk.js';
 import http from 'http';
 import https from 'https';
 import axios from 'axios';
@@ -22,6 +25,9 @@ export default (fastify, options, done) => {
     fastify.all('/mediaProxy', async (request, reply) => {
         const {thread = 1, form = 'urlcode', url, header, size = '128K', randUa = 0} = request.query;
 
+        // console.log('url:', url)
+        // console.log('header:', header)
+
         // Check if the URL parameter is missing
         if (!url) {
             return reply.code(400).send({error: 'Missing required parameter: url'});
@@ -29,16 +35,29 @@ export default (fastify, options, done) => {
 
         try {
             // Decode URL and headers based on the form type
-            const decodedUrl = form === 'base64' ? base64Decode(url) : decodeURIComponent(url);
+            const decodedUrl = form === 'base64' ? base64Decode(url) : url;
             const decodedHeader = header
-                ? JSON.parse(form === 'base64' ? base64Decode(header) : decodeURIComponent(header))
+                ? JSON.parse(form === 'base64' ? base64Decode(header) : header)
                 : {};
 
             // Call the proxy function, passing the decoded URL and headers
-            // return await proxyStreamMedia(decodedUrl, decodedHeader, reply);
-            return await proxyStreamMediaMulti(decodedUrl, decodedHeader, request, reply, thread, size, randUa);
+            // return await proxyStreamMediaMulti(decodedUrl, decodedHeader, request, reply, thread, size, randUa);
+            // return await chunkStream(request, reply, decodedUrl, ids[1], Object.assign({Cookie: cookie}, baseHeader));
+            if (ENV.get('play_proxy_mode', '1') !== '2') { // 2磁盘加速 其他都是内存加速
+                console.log('[mediaProxy] proxyStreamMediaMulti 内存加速:chunkSize:', sizeToBytes(size));
+                return await proxyStreamMediaMulti(decodedUrl, decodedHeader, request, reply, thread, size, randUa);
+            } else {
+                console.log('[mediaProxy] chunkStream 磁盘加速 chunkSize:', sizeToBytes('256K'));
+                return await chunkStream(request, reply, decodedUrl, md5(decodedUrl), decodedHeader,
+                    Object.assign({chunkSize: 1024 * 256, poolSize: 5, timeout: 1000 * 10}, {
+                        // chunkSize: sizeToBytes(size),
+                        poolSize: thread
+                    })
+                );
+            }
         } catch (error) {
-            fastify.log.error(error);
+            // fastify.log.error(error);
+            fastify.log.error(error.message);
             reply.code(500).send({error: error.message});
         }
     });
@@ -46,71 +65,15 @@ export default (fastify, options, done) => {
     done();
 };
 
-// 媒体文件 流式代理，单线程管道方式发送数据，且存在bug，暂不使用
-function proxyStreamMedia(videoUrl, headers, reply) {
-    console.log(`进入了流式代理: ${videoUrl} | headers: ${JSON.stringify(headers)}`);
-
-    const protocol = videoUrl.startsWith('https') ? https : http;
-    const agent = videoUrl.startsWith('https') ? httpsAgent : httpAgent;
-
-    // 发起请求
-    const proxyRequest = protocol.request(videoUrl, {headers, agent}, (videoResponse) => {
-        console.log('videoResponse.statusCode:', videoResponse.statusCode);
-        console.log('videoResponse.headers:', videoResponse.headers);
-
-        if (videoResponse.statusCode === 200 || videoResponse.statusCode === 206) {
-            const resp_headers = {
-                'Content-Type': videoResponse.headers['content-type'] || 'application/octet-stream',
-                'Content-Length': videoResponse.headers['content-length'],
-                ...(videoResponse.headers['content-range'] ? {'Content-Range': videoResponse.headers['content-range']} : {}),
-            };
-            console.log('Response headers:', resp_headers);
-            reply.headers(resp_headers).status(videoResponse.statusCode);
-
-            // 将响应流直接管道传输给客户端
-            videoResponse.pipe(reply.raw);
-
-            videoResponse.on('data', (chunk) => {
-                console.log('Data chunk received, size:', chunk.length);
-            });
-
-            videoResponse.on('end', () => {
-                console.log('Video data transmission complete.');
-            });
-
-            videoResponse.on('error', (err) => {
-                console.error('Error during video response:', err.message);
-                reply.code(500).send({error: 'Error streaming video', details: err.message});
-            });
-
-            reply.raw.on('finish', () => {
-                console.log('Data fully sent to client');
-            });
-
-            // 监听关闭事件，销毁视频响应流
-            reply.raw.on('close', () => {
-                console.log('Response stream closed.');
-                videoResponse.destroy();
-            });
-        } else {
-            console.error(`Unexpected status code: ${videoResponse.statusCode}`);
-            reply.code(videoResponse.statusCode).send({error: 'Failed to fetch video'});
-        }
-    });
-
-    // 监听错误事件
-    proxyRequest.on('error', (err) => {
-        console.error('Proxy request error:', err.message);
-        reply.code(500).send({error: 'Error fetching video', details: err.message});
-    });
-
-    // 必须调用 .end() 才能发送请求
-    proxyRequest.end();
-}
-
-
 // Helper function for range-based chunk downloading
-async function fetchStream(url, headers, start, end, randUa) {
+async function fetchStream(url, userHeaders, start, end, randUa) {
+    const headers = keysToLowerCase({
+        ...userHeaders,
+    });
+    // 添加accept属性防止获取网页源码编码不正确问题
+    if (!Object.keys(headers).includes('accept')) {
+        headers['accept'] = '*/*';
+    }
     try {
         const response = await _axios.get(url, {
             headers: {
@@ -148,15 +111,23 @@ async function proxyStreamMediaMulti(mediaUrl, reqHeaders, request, reply, threa
             })
             : reqHeaders;
 
+        const headers = keysToLowerCase({
+            ...randHeaders,
+        });
+        // 添加accept属性防止获取网页源码编码不正确问题
+        if (!Object.keys(headers).includes('accept')) {
+            headers['accept'] = '*/*';
+        }
         // 检查请求头中是否包含 Cookie
         const hasCookie = Object.keys(randHeaders).some(key => key.toLowerCase() === 'cookie');
         // console.log(`[proxyStreamMediaMulti] Checking for Cookie in headers: ${hasCookie}`);
+
 
         try {
             if (!hasCookie) {
                 // 优先尝试 HEAD 请求
                 // console.log('[proxyStreamMediaMulti] Attempting HEAD request to fetch content-length...');
-                const headResponse = await _axios.head(mediaUrl, {headers: randHeaders});
+                const headResponse = await _axios.head(mediaUrl, {headers: headers});
                 initialHeaders = headResponse.headers;
                 contentLength = parseInt(initialHeaders['content-length'], 10);
                 console.log(`[proxyStreamMediaMulti] HEAD request successful, content-length: ${contentLength}`);
@@ -169,7 +140,7 @@ async function proxyStreamMediaMulti(mediaUrl, reqHeaders, request, reply, threa
             // 使用 HTTP Range 请求获取 content-length
             try {
                 // console.log('[proxyStreamMediaMulti] Attempting Range GET request to fetch content-length...');
-                const rangeHeaders = {...randHeaders, Range: 'bytes=0-1'};
+                const rangeHeaders = {...headers, Range: 'bytes=0-1'};
                 const rangeResponse = await _axios.get(mediaUrl, {
                     headers: rangeHeaders,
                     responseType: 'stream',
@@ -190,11 +161,11 @@ async function proxyStreamMediaMulti(mediaUrl, reqHeaders, request, reply, threa
                 rangeResponse.data.destroy();
             } catch (rangeError) {
                 console.error('[proxyStreamMediaMulti] Range GET request failed:', rangeError.message);
-                console.log(randHeaders);
+                console.log('[proxyStreamMediaMulti] headers:', headers);
                 // 使用 GET 请求获取 content-length
                 // console.log('[proxyStreamMediaMulti] Falling back to full GET request to fetch content-length...');
                 const getResponse = await _axios.get(mediaUrl, {
-                    headers: randHeaders,
+                    headers: headers,
                     responseType: 'stream',
                 });
                 initialHeaders = getResponse.headers;
@@ -298,7 +269,6 @@ async function proxyStreamMediaMulti(mediaUrl, reqHeaders, request, reply, threa
         }
     }
 }
-
 
 // Helper function to convert size string (e.g., '128K', '1M') to bytes
 function sizeToBytes(size) {

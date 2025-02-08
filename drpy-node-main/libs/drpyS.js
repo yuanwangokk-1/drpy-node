@@ -1,5 +1,5 @@
 import {readFile} from 'fs/promises';
-import {existsSync, readFileSync} from 'fs';
+import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs';
 import {fileURLToPath} from "url";
 import {createRequire} from 'module';
 import {XMLHttpRequest} from 'xmlhttprequest';
@@ -7,6 +7,7 @@ import path from "path";
 import vm from 'vm';
 import WebSocket, {WebSocketServer} from 'ws';
 import zlib from 'zlib';
+import JSONbig from 'json-bigint';
 import * as minizlib from 'minizlib';
 import '../libs_drpy/es6-extend.js'
 import {getSitesMap} from "../utils/sites-map.js";
@@ -17,14 +18,18 @@ import {ENV} from '../utils/env.js';
 import {Quark} from "../utils/quark.js";
 import {UC} from "../utils/uc.js";
 import {Ali} from "../utils/ali.js";
+import {Cloud} from "../utils/cloud.js";
+import {Yun} from "../utils/yun.js";
 import AIS from '../utils/ais.js';
 // const { req } = await import('../utils/req.js');
 import {gbkTool} from '../libs_drpy/gbk.js'
 // import {atob, btoa, base64Encode, base64Decode, md5} from "../libs_drpy/crypto-util.js";
-import {base64Decode, base64Encode, md5, rc4Decrypt, rc4Encrypt, rc4, rc4_decode} from "../libs_drpy/crypto-util.js";
+import {base64Decode, base64Encode, md5, rc4, rc4_decode, rc4Decrypt, rc4Encrypt} from "../libs_drpy/crypto-util.js";
 import {getContentType, getMimeType} from "../utils/mime-type.js";
+import {getParsesDict} from "../utils/file.js";
 import "../utils/random-http-ua.js";
 import template from '../libs_drpy/template.js'
+import batchExecute from '../libs_drpy/batchExecute.js';
 import '../libs_drpy/abba.js'
 import '../libs_drpy/drpyInject.js'
 import '../libs_drpy/crypto-js.js';
@@ -50,12 +55,16 @@ globalThis._ENV = process.env;
 globalThis.Quark = Quark;
 globalThis.UC = UC;
 globalThis.Ali = Ali;
+globalThis.Cloud = Cloud;
+globalThis.Yun = Yun;
 globalThis.require = createRequire(import.meta.url);
 globalThis._fetch = fetch;
 globalThis.XMLHttpRequest = XMLHttpRequest;
 globalThis.WebSocket = WebSocket;
 globalThis.WebSocketServer = WebSocketServer;
 globalThis.zlib = zlib;
+globalThis.JSONbig = JSONbig;
+globalThis.JsonBig = JSONbig({storeAsString: true});
 globalThis.minizlib = minizlib;
 globalThis.AIS = AIS;
 globalThis.pathLib = {
@@ -75,8 +84,28 @@ globalThis.pathLib = {
         }
         return readFileSync(resolvedPath, 'utf8')
     },
+    writeFile: function (filename, text) {
+        let _file_path = path.join(_data_path, filename);
+        const resolvedPath = path.resolve(_data_path, _file_path); // 将路径解析为绝对路径
+        if (!resolvedPath.startsWith(_data_path)) {
+            log(`no access for read ${_file_path}`)
+            return '';
+        }
+        try {
+            const dirPath = path.dirname(resolvedPath);
+            // 检查目录是否存在，不存在则创建
+            if (!existsSync(dirPath)) {
+                mkdirSync(dirPath, {recursive: true});
+            }
+            writeFileSync(resolvedPath, text, 'utf8');
+            return true
+        } catch (e) {
+            log(`failed for saveFile ${_file_path}　error:${e.message}`);
+            return false
+        }
+    },
 };
-const {sleep, sleepSync, computeHash, deepCopy, urljoin, urljoin2, joinUrl, naturalSort} = utils;
+const {sleep, sleepSync, computeHash, deepCopy, urljoin, urljoin2, joinUrl, naturalSort, $js} = utils;
 const es6JsPath = path.join(__dirname, '../libs_drpy/es6-extend.js');
 // 读取扩展代码
 const es6_extend_code = readFileSync(es6JsPath, 'utf8');
@@ -149,12 +178,13 @@ export async function getSandbox(env = {}) {
         urljoin2,
         joinUrl,
         naturalSort,
+        $js,
         $,
         pupWebview,
         getProxyUrl,
         hostUrl,
         fServer,
-        getContentType, getMimeType,
+        getContentType, getMimeType, getParsesDict
     };
     const drpySanbox = {
         jsp,
@@ -241,6 +271,7 @@ export async function getSandbox(env = {}) {
         JSON5,
         jinja,
         template,
+        batchExecute,
         atob,
         btoa,
         base64Encode,
@@ -266,10 +297,14 @@ export async function getSandbox(env = {}) {
         Quark,
         UC,
         Ali,
+        Cloud,
+        Yun,
         require,
         WebSocket,
         WebSocketServer,
         zlib,
+        JSONbig,
+        JsonBig,
         minizlib,
     };
 
@@ -285,6 +320,7 @@ export async function getSandbox(env = {}) {
         module: {},   // 模块支持
         exports: {},   // 模块支持
         rule: {}, // 用于存放导出的 rule 对象
+        jx: {},// 用于存放导出的 解析 对象
         lazy: async function () {
         }, // 用于导出解析的默认函数
         _asyncGetRule: null,
@@ -324,14 +360,14 @@ export async function getSandbox(env = {}) {
  * @param refresh 强制清除缓存
  * @returns {Promise<object>} - 返回初始化后的模块对象
  */
-export async function init(filePath, env, refresh) {
+export async function init(filePath, env = {}, refresh) {
     try {
         // 读取文件内容
         const fileContent = await readFile(filePath, 'utf-8');
         // 计算文件的 hash 值
         const fileHash = computeHash(fileContent);
         const moduleName = path.basename(filePath, '.js');
-        let moduleExt = env.ext;
+        let moduleExt = env.ext || '';
         // log('moduleName:', moduleName);
         // log('moduleExt:', moduleExt);
         let SitesMap = getSitesMap(_config_path);
@@ -405,6 +441,7 @@ export async function init(filePath, env, refresh) {
         // const moduleObject = utils.deepCopy(sandbox.rule);
         const rule = sandbox.rule;
         if (moduleExt) { // 传了参数才覆盖rule参数，否则取rule内置
+            // log('moduleExt:', moduleExt);
             if (moduleExt.startsWith('../json')) {
                 rule.params = urljoin(env.jsonUrl, moduleExt.slice(8));
             } else {
@@ -429,7 +466,7 @@ export async function init(filePath, env, refresh) {
         moduleCache.set(hashMd5, {moduleObject, hash: fileHash});
         return moduleObject;
     } catch (error) {
-        console.log('Error in drpy.init:', error);
+        console.log(`Error in drpy.init :${filePath}`, error);
         throw new Error(`Failed to initialize module:${error.message}`);
     }
 }
@@ -449,7 +486,7 @@ export async function getRuleObject(filePath, env, refresh) {
                 return cached.ruleObject;
             }
         }
-        log(`Loading RuleObject: ${filePath}`);
+        log(`Loading RuleObject: ${filePath} fileSize:${fileContent.length}`);
         let t1 = utils.getNowTime();
         const {sandbox, context} = await getSandbox(env);
         const js_code = getOriginalJs(fileContent);
@@ -486,44 +523,43 @@ export async function initJx(filePath, env, refresh) {
         const fileContent = await readFile(filePath, 'utf-8');
         // 计算文件的 hash 值
         const fileHash = computeHash(fileContent);
+
+        let hashMd5 = md5(filePath + '#pAq#' + (env === {} ? 0 : 1));
+
         // 检查缓存：是否有文件且未刷新且文件 hash 未变化
-        if (jxCache.has(filePath) && !refresh) {
-            const cached = jxCache.get(filePath);
+        if (jxCache.has(hashMd5) && !refresh) {
+            const cached = jxCache.get(hashMd5);
             if (cached.hash === fileHash) {
                 // log(`Module ${filePath} already initialized and unchanged, returning cached instance.`);
-                return cached.lazy;
+                return cached.jxObj;
             }
         }
-        log(`Loading jx: ${filePath}`);
+        log(`Loading jx: ${filePath}, hash:${hashMd5}`);
         let t1 = utils.getNowTime();
-        const {sandbox, context} = await getSandbox(env)
+        const {sandbox, context} = await getSandbox(env);
         // 执行文件内容，将其放入沙箱中
         const js_code = getOriginalJs(fileContent);
         const js_code_wrapper = `
     _asyncGetLazy  = (async function() {
         ${js_code}
-        return lazy;
+        return {jx,lazy};
     })();
     `;
         const ruleScript = new vm.Script(js_code_wrapper);
         ruleScript.runInContext(context);
-        sandbox.lazy = await sandbox._asyncGetLazy;
-
-        // const js_code = getOriginalJs(fileContent);
-        // const ruleScript = new vm.Script(js_code);
-        // ruleScript.runInContext(context);
-
+        const jxResult = await sandbox._asyncGetLazy;
+        sandbox.lazy = jxResult.lazy;
+        sandbox.jx = jxResult.jx;
         const reqExtendScript = new vm.Script(req_extend_code);
         reqExtendScript.runInContext(context);
-
         let t2 = utils.getNowTime();
-        const lazy = sandbox.lazy;
+        const jxObj = {...sandbox.jx, lazy: sandbox.lazy};
         const cost = t2 - t1;
         console.log(`加载解析:${filePath} 耗时 ${cost}毫秒`)
-        jxCache.set(filePath, {lazy, hash: fileHash});
-        return lazy;
+        jxCache.set(hashMd5, {jxObj, hash: fileHash});
+        return jxObj;
     } catch (error) {
-        console.log('Error in drpy.initJx:', error);
+        console.log(`Error in drpy.initJx:${filePath}`, error);
         throw new Error(`Failed to initialize jx:${error.message}`);
     }
 }
@@ -591,6 +627,8 @@ async function invokeWithInjectVars(rule, method, injectVars, args) {
             console.log(`免嗅 ${injectVars.input} 执行完毕,结果为:`, JSON.stringify(result));
             break;
         case 'proxy_rule':
+            break;
+        case 'action':
             break;
         default:
             console.log(`invokeWithInjectVars: ${injectVars['method']}`);
@@ -662,19 +700,33 @@ async function invokeMethod(filePath, env, method, args = [], injectVars = {}) {
     injectVars['method'] = method;
     // 环境变量扩展进入this区域
     Object.assign(injectVars, env);
-    if (moduleObject[method] && typeof moduleObject[method] === 'function') {
+    if (method === 'lazy') {
+        const tmpLazyFunction = async function () {
+            let {input} = this;
+            return input
+        };
+        if (moduleObject[method] && typeof moduleObject[method] === 'function') {
+            try {
+                return await invokeWithInjectVars(moduleObject, moduleObject[method], injectVars, args);
+            } catch (e) {
+                let playUrl = injectVars.input || '';
+                log(`执行免嗅代码发送了错误: ${e.message},原始链接为:${playUrl}`);
+                if (SPECIAL_URL.test(playUrl) || /^(push:)/.test(playUrl) || playUrl.startsWith('http')) {
+                    return await invokeWithInjectVars(moduleObject, tmpLazyFunction, injectVars, args);
+                } else {
+                    throw e
+                }
+            }
+        } else if (!moduleObject[method]) {// 新增特性，可以不写lazy属性
+            return await invokeWithInjectVars(moduleObject, tmpLazyFunction, injectVars, args);
+        }
+    } else if (moduleObject[method] && typeof moduleObject[method] === 'function') {
         // console.log('injectVars:', injectVars);
         return await invokeWithInjectVars(moduleObject, moduleObject[method], injectVars, args);
     } else if (!moduleObject[method] && method === 'class_parse') { // 新增特性，可以不写class_parse属性
         const tmpClassFunction = async function () {
         };
         return await invokeWithInjectVars(moduleObject, tmpClassFunction, injectVars, args);
-    } else if (!moduleObject[method] && method === 'lazy') { // 新增特性，可以不写lazy属性
-        const tmpLazyFunction = async function () {
-            let {input} = this;
-            return input
-        };
-        return await invokeWithInjectVars(moduleObject, tmpLazyFunction, injectVars, args);
     } else {
         if (['推荐', '一级', '搜索'].includes(method)) {
             return []
@@ -849,6 +901,7 @@ async function homeParse(rule) {
         TYPE: 'home',
         input: url,
         MY_URL: url,
+        HOST: rule.host,
         classes: classes,
         filters: rule.filter,
         cate_exclude: rule.cate_exclude,
@@ -858,6 +911,9 @@ async function homeParse(rule) {
         pdfh: jsp.pdfh.bind(jsp),
         pdfa: jsp.pdfa.bind(jsp),
         pd: jsp.pd.bind(jsp),
+        pjfh: jsp.pjfh.bind(jsp),
+        pjfa: jsp.pjfa.bind(jsp),
+        pj: jsp.pj.bind(jsp),
     }
 
 }
@@ -909,6 +965,9 @@ async function homeVodParse(rule) {
         pdfh: jsp.pdfh.bind(jsp),
         pdfa: jsp.pdfa.bind(jsp),
         pd: jsp.pd.bind(jsp),
+        pjfh: jsp.pjfh.bind(jsp),
+        pjfa: jsp.pjfa.bind(jsp),
+        pj: jsp.pj.bind(jsp),
     }
 }
 
@@ -965,12 +1024,16 @@ async function cateParse(rule, tid, pg, filter, extend) {
         TYPE: 'cate',
         input: url,
         MY_URL: url,
+        HOST: rule.host,
         MY_PAGE: pg,
         fetch_params: deepCopy(rule.rule_fetch_params),
         jsp: jsp,
         pdfh: jsp.pdfh.bind(jsp),
         pdfa: jsp.pdfa.bind(jsp),
         pd: jsp.pd.bind(jsp),
+        pjfh: jsp.pjfh.bind(jsp),
+        pjfa: jsp.pjfa.bind(jsp),
+        pj: jsp.pj.bind(jsp),
     }
 }
 
@@ -985,7 +1048,7 @@ async function cateParseAfter(d, pg) {
 }
 
 async function detailParse(rule, ids) {
-    let vid = ids[0];
+    let vid = ids[0].toString();
     let orId = vid;
     let fyclass = '';
     log('orId:' + orId);
@@ -1011,12 +1074,16 @@ async function detailParse(rule, ids) {
         orId: orId,
         fyclass: fyclass,
         MY_URL: url,
+        HOST: rule.host,
         fetch_params: deepCopy(rule.rule_fetch_params),
         jsp: jsp,
         pdfh: jsp.pdfh.bind(jsp),
         pdfa: jsp.pdfa.bind(jsp),
         pd: jsp.pd.bind(jsp),
         pdfl: jsp.pdfl.bind(jsp), // 二级绑定pdfl函数
+        pjfh: jsp.pjfh.bind(jsp),
+        pjfa: jsp.pjfa.bind(jsp),
+        pj: jsp.pj.bind(jsp),
     }
 }
 
@@ -1067,12 +1134,16 @@ async function searchParse(rule, wd, quick, pg) {
         KEY: wd,
         input: url,
         MY_URL: url,
+        HOST: rule.host,
         detailUrl: rule.detailUrl || '',
         fetch_params: deepCopy(rule.rule_fetch_params),
         jsp: jsp,
         pdfh: jsp.pdfh.bind(jsp),
         pdfa: jsp.pdfa.bind(jsp),
         pd: jsp.pd.bind(jsp),
+        pjfh: jsp.pjfh.bind(jsp),
+        pjfa: jsp.pjfa.bind(jsp),
+        pj: jsp.pj.bind(jsp),
     }
 
 }
@@ -1089,16 +1160,22 @@ async function searchParseAfter(d, pg) {
 
 async function playParse(rule, flag, id, flags) {
     let url = id;
-    // log('playParse:', url)
     if (!/http/.test(url)) {
         try {
             url = base64Decode(url);
-            log('base64')
+            log('[playParse]: id is base64 data');
         } catch (e) {
         }
     }
     url = decodeURIComponent(url);
-    // log('playParse:', url)
+    if (!/^http/.test(url)) {
+        url = id;
+    }
+    if (id !== url) {
+        log(`[playParse]: ${id} => ${url}`);
+    } else {
+        log(`[playParse]: ${url}`);
+    }
     const jsp = new jsoup(url);
     return {
         TYPE: 'play',
@@ -1106,11 +1183,15 @@ async function playParse(rule, flag, id, flags) {
         flag: flag,
         input: url,
         MY_URL: url,
+        HOST: rule.host,
         fetch_params: deepCopy(rule.rule_fetch_params),
         jsp: jsp,
         pdfh: jsp.pdfh.bind(jsp),
         pdfa: jsp.pdfa.bind(jsp),
         pd: jsp.pd.bind(jsp),
+        pjfh: jsp.pjfh.bind(jsp),
+        pjfa: jsp.pjfa.bind(jsp),
+        pj: jsp.pj.bind(jsp),
     }
 }
 
@@ -1246,10 +1327,24 @@ export async function getRule(filePath, env) {
 export async function jx(filePath, env, params) {
     params = params || {};
     try {
-        const lazy = await initJx(filePath, env); // 确保模块已初始化
-        return await lazy(params.url || '', params)
+        const jxObj = await initJx(filePath, env); // 确保模块已初始化
+        const lazy = await jxObj.lazy;
+        const result = await lazy(params.url || '', params);
+        // log(`[jx]: ${JSON.stringify(result)}`);
+        return result;
     } catch (e) {
         return {code: 404, url: '', msg: `${filePath} 代理解析错误:${e.message}`, cost: ''}
+    }
+}
+
+export async function getJx(filePath) {
+    try {
+        // 确保模块已初始化
+        const jxObj = await initJx(filePath, {});
+        // console.log('jxObj:', jxObj);
+        return jxObj;
+    } catch (e) {
+        return {code: 403, error: `${filePath} 获取代理信息错误:${e.message}`}
     }
 }
 

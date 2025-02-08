@@ -2,9 +2,12 @@ import fastifyStatic from '@fastify/static';
 import * as fastlogger from './controllers/fastlogger.js'
 import path from 'path';
 import os from 'os';
+import qs from 'qs';
 import {fileURLToPath} from 'url';
 import formBody from '@fastify/formbody';
-import {validateBasicAuth} from "./utils/api_validate.js";
+import {validateBasicAuth, validatePwd} from "./utils/api_validate.js";
+// 注册控制器
+import {registerRoutes} from './controllers/index.js';
 
 const {fastify} = fastlogger;
 
@@ -31,25 +34,48 @@ fastify.register(fastifyStatic, {
     decorateReply: false, // 禁用 sendFile
 });
 
-// 给静态目录插件中心挂载basic验证
-fastify.addHook('preHandler', (req, reply, done) => {
-    if (req.raw.url.startsWith('/apps/')) {
-        validateBasicAuth(req, reply, done);
-    } else {
-        done();
-    }
+fastify.register(fastifyStatic, {
+    root: path.join(__dirname, 'js_dr2'),
+    prefix: '/js/', // 新的访问路径前缀
+    decorateReply: false, // 禁用 sendFile
 });
 
 // 注册插件以支持 application/x-www-form-urlencoded
 fastify.register(formBody);
 
-// 注册控制器
-import {registerRoutes} from './controllers/index.js';
+// 给静态目录插件中心挂载basic验证
+fastify.addHook('preHandler', (req, reply, done) => {
+    if (req.raw.url.startsWith('/apps/')) {
+        validateBasicAuth(req, reply, done);
+    } else if (req.raw.url.startsWith('/js/')) {
+        validatePwd(req, reply, done).then(r => done());
+    } else {
+        done();
+    }
+});
+
+// 自定义插件替换 querystring 解析行为.避免出现两个相同参数被解析成列表
+fastify.addHook('onRequest', async (request, reply) => {
+    // 获取原始 URL 中的 query 部分
+    const rawUrl = request.raw.url;
+    const urlParts = rawUrl.split('?');
+    const path = urlParts[0];
+    let rawQuery = urlParts.slice(1).join('?'); // 处理可能存在的多个 '?' 情况
+    // log('rawQuery:', rawQuery);
+    // 使用 qs 库解析 query 参数，确保兼容参数值中包含 '?' 的情况
+    request.query = qs.parse(rawQuery, {
+        strictNullHandling: true, // 确保 `=` 被解析为空字符串
+        arrayLimit: 100,         // 自定义数组限制
+        allowDots: false,        // 禁止点号表示嵌套对象
+    });
+    // 如果需要，可以在这里对 request.query 进行进一步处理
+});
 
 registerRoutes(fastify, {
     rootDir: __dirname,
     docsDir: path.join(__dirname, 'docs'),
     jsDir: path.join(__dirname, 'js'),
+    dr2Dir: path.join(__dirname, 'js_dr2'),
     jxDir: path.join(__dirname, 'jx'),
     viewsDir: path.join(__dirname, 'views'),
     configDir: path.join(__dirname, 'config'),

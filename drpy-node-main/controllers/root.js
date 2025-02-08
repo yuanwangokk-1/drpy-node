@@ -1,5 +1,5 @@
 import path from 'path';
-import {readdirSync, readFileSync, writeFileSync, existsSync} from 'fs';
+import {existsSync, readdirSync, readFileSync, writeFileSync} from 'fs';
 import '../utils/marked.min.js';
 import {computeHash} from '../utils/utils.js';
 import {validateBasicAuth} from "../utils/api_validate.js";
@@ -82,6 +82,30 @@ export default (fastify, options, done) => {
             }
         } catch (error) {
             reply.status(500).send({error: 'Failed to fetch favicon', details: error.message});
+        }
+    });
+
+    fastify.get('/cat/index.html', {preHandler: validateBasicAuth}, async (request, reply) => {
+        try {
+            // 设置文件路径
+            const catHtmlPath = path.join(options.rootDir, 'data/cat/index.html');
+
+            if (existsSync(catHtmlPath)) {
+                const protocol = request.headers['x-forwarded-proto'] || (request.socket.encrypted ? 'https' : 'http');  // http 或 https
+                const hostname = request.hostname;
+                // const port = request.socket.localPort;  // 获取当前服务的端口
+                // let requestUrl = `${protocol}://${hostname}${request.url}`;
+                let content = readFileSync(catHtmlPath, 'utf-8');
+                const validUsername = process.env.API_AUTH_NAME || 'admin';
+                const validPassword = process.env.API_AUTH_CODE || 'drpys';
+                let catLink = `${protocol}://${validUsername}:${validPassword}@${hostname}/config/index.js.md5`;
+                content = content.replace('$catLink', catLink);
+                return reply.type('text/html').send(content);
+            } else {
+                reply.status(404).send({error: 'Favicon not found'}); // 如果文件不存在，返回 404 错误
+            }
+        } catch (error) {
+            reply.status(500).send({error: 'Failed to fetch cat', details: error.message});
         }
     });
     done();

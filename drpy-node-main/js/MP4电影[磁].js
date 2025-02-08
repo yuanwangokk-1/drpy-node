@@ -3,7 +3,7 @@
 // http://localhost:5757/api/MP4电影[磁]?ac=detail&ids=/detail/9278.html
 // http://localhost:5757/api/MP4电影[磁]?wd=我的&pg=1
 // http://localhost:5757/api/MP4电影[磁]?play=bXZfNTcyMzUtbm1fMQ%3D%3D&flag=由qq倾情打造
-const { getHtml } = $.require('./_lib.request.js')
+const {getHtml} = $.require('./_lib.request.js')
 var rule = {
     类型: '影视',
     title: 'MP4电影',
@@ -25,17 +25,17 @@ var rule = {
     class_parse: async () => {
         return {
             class: [
-                { type_name: '动作片', type_id: '1' },
-                { type_name: '科幻片', type_id: '2' },
-                { type_name: '爱情片', type_id: '3' },
-                { type_name: '喜剧片', type_id: '4' },
-                { type_name: '恐怖片', type_id: '5' },
-                { type_name: '战争片', type_id: '6' },
-                { type_name: '剧情片', type_id: '7' },
-                { type_name: '纪录片', type_id: '8' },
-                { type_name: '动画片', type_id: '9' },
-                { type_name: '电视剧', type_id: '10' },
-                { type_id: "分类", type_name: "分类" }],
+                {type_name: '动作片', type_id: '1'},
+                {type_name: '科幻片', type_id: '2'},
+                {type_name: '爱情片', type_id: '3'},
+                {type_name: '喜剧片', type_id: '4'},
+                {type_name: '恐怖片', type_id: '5'},
+                {type_name: '战争片', type_id: '6'},
+                {type_name: '剧情片', type_id: '7'},
+                {type_name: '纪录片', type_id: '8'},
+                {type_name: '动画片', type_id: '9'},
+                {type_name: '电视剧', type_id: '10'},
+                {type_id: "分类", type_name: "分类"}],
             filters: {
                 分类: [
                     {
@@ -374,7 +374,7 @@ var rule = {
         return []
     },
     一级: async function (tid, pg, filter, extend) {
-        let { MY_CATE, input } = this;
+        let {MY_CATE, input} = this;
         const type = extend.type ? "-id-" + extend.type : "";
         const year = extend.year ? "-year-" + extend.year : "";
         const area = extend.area ? "-area-" + extend.area : "";
@@ -414,7 +414,7 @@ var rule = {
         return videos
     },
     二级: async function (ids) {
-        let { input } = this;
+        let {input} = this;
         const html = (await getHtml({
             url: rule.host + ids[0],
             headers: rule.headers
@@ -447,7 +447,7 @@ var rule = {
         return vod
     },
     搜索: async function (wd, quick, pg) {
-        let { input } = this
+        let {input} = this
         const html = (await req(`${rule.host}/search/`, {
             method: "POST",
             headers: rule.headers,
@@ -470,6 +470,6 @@ var rule = {
         return videos
     },
     lazy: async function (flag, id, flags) {
-        return { parse: 0, url: id }
+        return {parse: 0, url: id}
     },
 };
