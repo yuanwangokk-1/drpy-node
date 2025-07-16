@@ -20,6 +20,7 @@ import {UC} from "../utils/uc.js";
 import {Ali} from "../utils/ali.js";
 import {Cloud} from "../utils/cloud.js";
 import {Yun} from "../utils/yun.js";
+import {Pan} from "../utils/pan123.js";
 import AIS from '../utils/ais.js';
 // const { req } = await import('../utils/req.js');
 import {gbkTool} from '../libs_drpy/gbk.js'
@@ -58,6 +59,7 @@ globalThis.UC = UC;
 globalThis.Ali = Ali;
 globalThis.Cloud = Cloud;
 globalThis.Yun = Yun;
+globalThis.Pan = Pan;
 globalThis.require = createRequire(import.meta.url);
 globalThis._fetch = fetch;
 globalThis.XMLHttpRequest = XMLHttpRequest;
@@ -161,6 +163,26 @@ try {
     console.log(`Failed to import simplecc:${error.message}`);
 }
 globalThis.simplecc = simplecc;
+
+let DataBase = null;
+let database = null;
+try {
+    if (typeof fetchByHiker !== 'undefined' && typeof globalThis.import === 'function') {
+        const sqliteUtil = await globalThis.import('../utils/database.js'); // 海阔放在globalThis里去动态引入
+        DataBase = sqliteUtil.DataBase;
+        database = sqliteUtil.database;
+    } else {
+        const sqliteUtil = await import('../utils/database.js');  // 使用动态 import
+        DataBase = sqliteUtil.DataBase;
+        database = sqliteUtil.database;
+    }
+    console.log('sqlite3 database imported successfully');
+} catch (error) {
+    console.log(`Failed to import sqlite3:${error.message}`);
+}
+
+globalThis.DataBase = DataBase;
+globalThis.database = database;
 
 
 export async function getSandbox(env = {}) {
@@ -299,6 +321,9 @@ export async function getSandbox(env = {}) {
         Ali,
         Cloud,
         Yun,
+        Pan,
+        DataBase,
+        database,
         require,
         WebSocket,
         WebSocketServer,
@@ -317,6 +342,9 @@ export async function getSandbox(env = {}) {
         setInterval,
         clearTimeout,
         clearInterval,
+        TextEncoder,
+        TextDecoder,
+        performance,
         module: {},   // 模块支持
         exports: {},   // 模块支持
         rule: {}, // 用于存放导出的 rule 对象

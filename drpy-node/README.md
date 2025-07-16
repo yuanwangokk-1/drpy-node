@@ -1,7 +1,7 @@
 # drpyS(drpy-node)
 
 nodejs作为服务端的drpy实现。全面升级异步写法  
-~~积极开发中，每日一更~~，当前进度 `48%`  
+~~积极开发中，每日一更~~，当前进度 `49%`  
 找工作中，随缘更新
 
 * [本地配置接口-动态本地](/config?pwd=)
@@ -18,6 +18,26 @@ nodejs作为服务端的drpy实现。全面升级异步写法
 * [在线猫ds源主页](/cat/index.html)
 
 ## 更新记录
+
+### 20250310
+
+更新至V1.1.23
+
+### 20250227
+
+更新至V1.1.22
+
+### 20250226
+
+更新至V1.1.21
+
+### 20250225
+
+更新至V1.1.20
+
+### 20250224
+
+更新至V1.1.19
 
 ### 20250211
 
@@ -149,6 +169,8 @@ pm2 restart drpys
 
 * [猫影视git文件加速](https://github.catvod.com/)
 * [猫影视多功能主页](https://catvod.com/)
+* [ZY写源教学](https://zy.catni.cn/editSource/edit-grammar.html)
+* [源动力](https://sourcepower.top/index)
 
 ## AI接入
 

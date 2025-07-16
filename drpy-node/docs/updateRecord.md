@@ -1,5 +1,76 @@
 # drpyS更新记录
 
+### 20250310
+
+更新至V1.1.23
+
+1. 修复番茄小说
+2. 新增2个源
+
+### 20250227
+
+更新至V1.1.22
+
+1. 优化123网盘的逻辑和推送示例
+2. 优化sqlite3库兼容装逼壳
+
+### 20250226
+
+更新至V1.1.21
+
+1. 增加123网盘的逻辑和推送示例
+
+### 20250225
+
+更新至V1.1.20
+
+1. UC整体逻辑修改，并在扫码插件增加了UC_TOKEN扫码逻辑
+2. 数据库sqlite3优化，寻找另一个wasm实现的库平替了兼容性极差的sqlite3原生库
+
+### 20250224
+
+更新至V1.1.19
+
+1. 修复 推送和所有网盘源涉及的UC播放问题，支持原代本和原代服务加速
+2. 更新猫爪的 alist.js
+3. 新增 `sqlite` `sqlite3` 依赖，在ds源里的异步方法里直接使用，示例:
+
+```javascript
+await database.startDb();
+console.log('database:', database);
+const db = database.db;
+// 创建表
+await db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL
+    )
+  `);
+
+// 插入数据
+await db.run('INSERT INTO users (name) VALUES (?)', ['Alice']);
+await db.run('INSERT INTO users (name) VALUES (?)', ['Bob']);
+
+// 查询数据
+const users = await db.all('SELECT * FROM users');
+console.log(users);
+
+// 更新数据
+await db.run('UPDATE users SET name = ? WHERE id = ?', ['Charlie', 1]);
+
+// 查询更新后的数据
+const updatedUsers = await db.all('SELECT * FROM users');
+console.log(updatedUsers);
+
+// 删除数据
+await db.run('DELETE FROM users WHERE id = ?', [2]);
+
+// 查询删除后的数据
+const finalUsers = await db.all('SELECT * FROM users');
+console.log(finalUsers);
+await database.endDb();
+```
+
 ### 20250211
 
 更新至V1.1.18
@@ -40,7 +111,7 @@
 6. 修复移动盘播放问题
 7. 不夜的推送不讲规矩，只支持get不支持post，需要壳适配。一级不讲规则，ac只能detail才有数据，list/videolist不行
 8. 统一挨着修改网盘源，增加二级数据返回 vod_play_pan，按$$$分割的原始网盘链接，包括push也有效，方便海阔本地小程序播放
-9. 增加 [源动力](https://www.sourcepower.top/source) 官方出品的`短剧库.js`
+9. 增加 [源动力](https://sourcepower.top/source) 官方出品的`短剧库.js`
 10. 设置中心推送视频去掉编码，交给壳子处理，防止双层编码导致的问题
 
 ### 20250121
@@ -49,7 +120,7 @@
 
 1. 猫源ds在线配置支持接口密码
 2. 修复移动网盘工具类(移动1可以，2和3还是不行)
-3. 新增 [源动力](https://www.sourcepower.top/source) 官方出品的两个源 `麦田影院.js` `凡客TV.js`
+3. 新增 [源动力](https://sourcepower.top/source) 官方出品的两个源 `麦田影院.js` `凡客TV.js`
 4. 设置中心增加接口挂载功能，可以挂载hipy-t4和不夜t4(box在线配置)
 5. 多线程播放加速新增 磁盘加速模式
 

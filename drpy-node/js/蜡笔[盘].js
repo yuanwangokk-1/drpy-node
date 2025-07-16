@@ -4,7 +4,8 @@ const {
 } = misc;
 var rule = {
     title: '蜡笔[盘]',
-    host: 'https://duopan.fun',
+    // host: 'https://duopan.fun',
+    host: 'http://feimaoai.site/',
     url: '/index.php/vod/show/id/fyfilter.html',
     filter_url: '{{fl.cateId}}{{fl.area}}{{fl.by}}{{fl.class}}{{fl.lang}}{{fl.letter}}/page/fypage{{fl.year}}',
     searchUrl: '/index.php/vod/search/page/fypage/wd/**.html',
@@ -58,7 +59,7 @@ var rule = {
     },
     推荐: async function (tid, pg, filter, extend) {
         let {MY_CATE, input} = this;
-        let html = (await getHtml('https://duopan.fun/index.php/vod/show/id/24.html')).data
+        let html = (await getHtml(rule.host+'/index.php/vod/show/id/24.html')).data
         const $ = pq(html)
         let videos = []
         $('.module-items .module-item').each((index, item) => {
@@ -196,22 +197,13 @@ var rule = {
                 header: headers
             }
         } else if (flag.startsWith('UC-')) {
-            console.log("UC网盘解析开始")
+            console.log("UC网盘解析开始");
             if (!UCDownloadingCache[ids[1]]) {
                 const down = await UC.getDownload(ids[0], ids[1], ids[2], ids[3], true);
                 if (down) UCDownloadingCache[ids[1]] = down;
             }
-            downUrl = UCDownloadingCache[ids[1]].download_url;
-            urls.push("UC原画", downUrl);
-            return {
-                parse: 0,
-                url: urls,
-                header: {
-                    "Referer": "https://drive.uc.cn/",
-                    "cookie": UC.cookie,
-                    "User-Agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) quark-cloud-drive/2.5.20 Chrome/100.0.4896.160 Electron/18.3.5.4-b478491100 Safari/537.36 Channel/pckk_other_ch'
-                },
-            }
+            const downCache = UCDownloadingCache[ids[1]];
+            return await UC.getLazyResult(downCache, mediaProxyUrl)
         }
     },
 }
